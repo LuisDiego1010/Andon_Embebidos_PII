@@ -1,0 +1,13 @@
+# Entorno de desarrollo y pruebas (niveles 1 y 2). Python 3.12 como la imagen Yocto.
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends mosquitto-clients curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir flask paho-mqtt smbus2 pytest
+
+ENV PYTHONPATH=/work/app/src \
+    PYTHONUNBUFFERED=1
+WORKDIR /work
+CMD ["bash"]
