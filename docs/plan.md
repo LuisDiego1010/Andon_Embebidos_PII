@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-05
+Última actualización: 2026-11-04
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.

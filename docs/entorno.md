@@ -75,7 +75,7 @@ Leyenda: ✅ cumple · ❌ falta o no cumple · ⚠️ cumple con observaciones 
 7. **`rpi-imager`** de Ubuntu (1.8.5) es antiguo pero sirve para preconfigurar
    Raspberry Pi OS (usuario, SSH, Wi-Fi). `bmaptool` es suficiente para grabar
    imágenes `.wic` de Yocto. Se instalan ambos.
-8. **Builder de Buildx en contenedor sin DNS (2026-11-05).** `embedded-builder` (driver
+8. **Builder de Buildx en contenedor sin DNS (2026-11-04).** `embedded-builder` (driver
    `docker-container`) usa el DNS 172.21.16.7, que no responde, y `docker compose build`
    falla al resolver `registry-1.docker.io`. Solución: usar el builder `default`, que toma
    la imagen local: `BUILDX_BUILDER=default docker compose -f docker/compose.yaml up -d --build`.

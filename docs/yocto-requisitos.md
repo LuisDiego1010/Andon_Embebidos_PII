@@ -1,7 +1,7 @@
 # Requisitos de la app para la imagen Yocto — v1
 
 Para: Diego (imagen Yocto, `meta-andon/`, `kas/`). De: Eduardo (app).
-Fecha: 2026-11-05. Versión 1 (F1); la v2 (F6) agrega rutas finales, instalador,
+Fecha: 2026-11-04. Versión 1 (F1); la v2 (F6) agrega rutas finales, instalador,
 unidades systemd y pruebas `oeqa`.
 
 La app se desarrolla contra estos supuestos y no depende de la imagen. Todo lo marcado

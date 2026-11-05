@@ -2,7 +2,7 @@
 
 - **Estado:** cerrada en formato; timeout y umbral de confianza **provisionales**
   hasta medir en la RPi 4 (F2) y con más reportes (F4/F7).
-- **Fecha:** 2026-11-05
+- **Fecha:** 2026-11-04
 - **Entorno de medición:** Docker `dev` en la PC (x86, 8 hilos), Ollama 0.40.14,
   `tev1:0.8b` (Q8_0, 772 M parámetros, capacidad `decision`).
 
