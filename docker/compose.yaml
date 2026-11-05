@@ -9,7 +9,7 @@ services:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.13   # misma versión que la receta ollama-bin de la imagen
     ports:
       - "11434:11434"
     volumes:

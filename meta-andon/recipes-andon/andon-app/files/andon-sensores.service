@@ -1,0 +1,17 @@
+[Unit]
+Description=Andon · lazo de seguridad (sensores y actuadores)
+After=mosquitto.service
+Wants=mosquitto.service
+
+[Service]
+User=andon
+Group=andon
+SupplementaryGroups=i2c gpio
+Environment=PYTHONPATH=/opt/andon
+Environment=ANDON_CONF=/etc/andon/andon.conf
+ExecStart=/usr/bin/python3 -m andon.sensores
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

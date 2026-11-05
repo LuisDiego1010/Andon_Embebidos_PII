@@ -1,0 +1,19 @@
+[Unit]
+Description=Ollama (servidor local de modelos)
+After=network.target
+
+[Service]
+User=ollama
+Group=ollama
+Environment=HOME=/var/lib/ollama
+Environment=OLLAMA_MODELS=/var/lib/ollama/models
+# Solo escucha dentro de la Raspberry Pi: andon-core le habla por localhost
+Environment=OLLAMA_HOST=127.0.0.1:11434
+# Mantiene el modelo cargado en memoria para que cada decisión sea rápida
+Environment=OLLAMA_KEEP_ALIVE=-1
+ExecStart=/usr/bin/ollama serve
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

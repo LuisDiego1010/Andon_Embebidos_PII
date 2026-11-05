@@ -1,3 +1,4 @@
+# --- Python (app) ---
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -5,3 +6,16 @@ __pycache__/
 *.db
 *.sqlite3
 .venv/
+
+# --- Yocto: salida de compilación y capas que descarga kas ---
+build/
+poky/
+meta-openembedded/
+meta-raspberrypi/
+sstate-cache/
+downloads/
+compilacion*.log
+
+# Modelo empaquetado (~1 GB): se genera con scripts/empacar-modelo.sh
+meta-andon/recipes-ai/ollama/files/*.tar.gz
+.cache/
