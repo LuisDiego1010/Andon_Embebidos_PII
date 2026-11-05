@@ -1,0 +1,11 @@
+# Salida de compilación de Yocto y capas descargadas por kas
+build/
+poky/
+meta-openembedded/
+meta-raspberrypi/
+sstate-cache/
+downloads/
+
+# Modelo empaquetado (~1 GB): se genera con scripts/empacar-modelo.sh
+meta-andon/recipes-ai/ollama/files/*.tar.gz
+.cache/
