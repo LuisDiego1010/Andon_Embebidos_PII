@@ -58,6 +58,7 @@ def test_ruta_desde_andon_conf(tmp_path):
     "[gpio]\nverde = 17\n",          # repite el pin de la máquina
     "[gpio]\nroja = 40\n",           # fuera de 0..27
     "[mqtt]\npuerto = 99999\n",
+    "[sensores]\ntolerancia_fallo_s = 0\n",
     "[umbrales]\nvib_rms_g = mucho\n",  # no numérico
     "[ollama]\ncalentar = quizás\n",
     "esto no es ini",
@@ -80,3 +81,11 @@ def test_topicos_con_prefijo():
     assert topicos.RETENIDOS == {topicos.SEGURIDAD, topicos.ESTADO, topicos.SALIDAS}
     todos = [v for k, v in vars(topicos).items() if isinstance(v, str) and v.startswith(topicos.PREFIJO) and k != "PREFIJO"]
     assert len(todos) == len(set(todos)) == 10
+
+
+def test_sensores_y_ruta_del_paro(tmp_path):
+    r = escribir(tmp_path, "[general]\nparo_ruta = /tmp/p.json\n[sensores]\ntolerancia_fallo_s = 3.5\n")
+    c = cargar(r, entorno={})
+    assert c.sensores.tolerancia_fallo_s == 3.5 and c.paro_ruta == "/tmp/p.json"
+    assert cargar(r, entorno={"ANDON_PARO_RUTA": "/x/y.json"}).paro_ruta == "/x/y.json"
+    assert config.Config().sensores.tolerancia_fallo_s == 2.0
