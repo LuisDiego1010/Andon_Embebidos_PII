@@ -8,7 +8,8 @@ import pytest
 
 from andon.core import ollama
 from andon.core.ollama import (ErrorConexion, ErrorRespuesta, ErrorTimeout,
-                               clasificar, construir_estado, construir_solicitud)
+                               calentar, clasificar, construir_estado,
+                               construir_solicitud)
 
 
 def respuesta_ok(cat="falla_mecanica", prob=0.9):
@@ -119,3 +120,23 @@ def test_estructura_incompleta(servidor, cuerpo):
     servidor.cuerpo = cuerpo
     with pytest.raises(ErrorRespuesta):
         clasificar("x", url=servidor.url)
+
+
+def test_calentar_devuelve_segundos(servidor):
+    servidor.espera_s = 0.1
+    t = calentar(url=servidor.url)
+    assert t is not None and t >= 0.1
+    assert "calentamiento" in servidor.recibido["state"]
+
+
+def test_calentar_no_lanza_si_falla():
+    assert calentar(url="http://127.0.0.1:1", timeout_s=1) is None
+
+
+def test_calentar_no_lanza_con_timeout(servidor):
+    servidor.espera_s = 1.0
+    assert calentar(url=servidor.url, timeout_s=0.2) is None
+
+
+def test_timeout_por_defecto_cubre_la_placa():
+    assert ollama.TIMEOUT_S >= 45

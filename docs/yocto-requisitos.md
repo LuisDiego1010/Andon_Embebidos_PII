@@ -90,3 +90,34 @@ Todo lo demás es biblioteca estándar (`urllib`, `sqlite3`, `json`, `threading`
 4. ¿Pin del bus 1-Wire y overlays de I2C / 1-Wire?
 5. ¿Usuario de servicio, grupos y reglas udev?
 6. ¿Imagen `qemuarm64` disponible para el nivel 3?
+
+---
+
+# Notas v1.1 (2026-11-06) · respuesta a `docs/yocto-respuestas.md`
+
+Gracias por las respuestas y por la imagen: quedan cerradas las 6 preguntas de la v1.
+
+## Confirmado por la app
+| Tema | Decisión |
+|---|---|
+| Configuración | `/etc/andon/andon.conf`, variable `ANDON_CONF`. Lo entrega la app en `app/config/andon.conf` |
+| Web | `andon-web` escucha en `0.0.0.0:5000` |
+| Ollama | Versión 0.40.13 de la imagen. Docker de desarrollo queda alineado con ella |
+| Timeout hacia Ollama | 45 s (D4). `andon-core` hace una consulta de calentamiento al arrancar |
+
+## Pedidos a la imagen
+1. **CPU en modo `performance` desde el arranque** (≈ 10 % menos de latencia, medido por Diego).
+2. Revisar los 6 avisos de la compilación.
+3. Confirmar el mapa de pines al cablear (propuesta en `docs/hardware.md`; vive en
+   `andon.conf`, cambiarlo no toca código): MOSFET GPIO17, LEDs 22/27/23, zumbador 24.
+
+## Pendientes de la app, con fecha estimada
+| Entrega | Cuándo |
+|---|---|
+| `hal/` (interfaz, simulación, RPi) y `common/config.py` | F2, 6 nov |
+| `__main__.py` de `andon.sensores` | F3 |
+| `__main__.py` de `andon.core` y `andon.web` | F4 y F5 |
+| `make install`, unidades systemd en `app/deploy/`, Mosquitto, hostapd, dnsmasq | F6 |
+
+Mientras tanto las unidades siguen desactivadas. Las unidades systemd: la decisión de
+dónde viven (receta o `app/deploy/systemd/`) queda pendiente de acordar contigo.

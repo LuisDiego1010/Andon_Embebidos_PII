@@ -11,12 +11,16 @@ a luz amarilla y revisión manual (REQ-F08); nunca se propaga como caída del se
 """
 
 import json
+import logging
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
+log = logging.getLogger(__name__)
+
 MODELO = "tev1:0.8b"
+TIMEOUT_S = 45.0  # RPi 4: ~17 s por consulta (D4); la carga en frío puede llegar a ~40 s
 PREGUNTA = "categoria"
 
 CATEGORIAS = {
@@ -99,7 +103,7 @@ def _interpretar(cuerpo):
 
 
 def clasificar(texto, vib_rms_g=None, temp_c=None, url="http://localhost:11434",
-               modelo=MODELO, timeout_s=10.0):
+               modelo=MODELO, timeout_s=TIMEOUT_S):
     """Clasifica un reporte. Devuelve Resultado o lanza una subclase de ErrorOllama."""
     estado = construir_estado(texto, vib_rms_g, temp_c)
     datos = json.dumps(construir_solicitud(estado, modelo)).encode()
@@ -129,3 +133,20 @@ def clasificar(texto, vib_rms_g=None, temp_c=None, url="http://localhost:11434",
         raise ErrorRespuesta("el cuerpo no es JSON válido") from e
     categoria, prob, confianza, probabilidades = _interpretar(cuerpo)
     return Resultado(categoria, prob, confianza, probabilidades, latencia_ms)
+
+
+def calentar(url="http://localhost:11434", modelo=MODELO, timeout_s=120.0):
+    """Hace una consulta mínima para cargar el modelo en memoria al arrancar.
+
+    Sin esto, el primer reporte del operario paga la carga (~38 s en la RPi 4).
+    Nunca lanza: devuelve los segundos que tardó, o None si falló (queda en el log).
+    """
+    t0 = time.monotonic()
+    try:
+        clasificar("calentamiento", url=url, modelo=modelo, timeout_s=timeout_s)
+    except ErrorOllama as e:
+        log.warning("calentamiento fallido: %s", e)
+        return None
+    segundos = time.monotonic() - t0
+    log.info("modelo %s listo en %.1f s", modelo, segundos)
+    return segundos

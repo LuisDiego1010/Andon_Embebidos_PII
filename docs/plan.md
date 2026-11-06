@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-04
+Última actualización: 2026-11-06
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
@@ -24,7 +24,7 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D1 | Dueño del hardware | `andon-sensores` maneja todo el hardware; core envía órdenes | Cerrada |
 | D2 | Comunicación entre servicios | MQTT local | Cerrada |
 | D3 | `andon-web` | Proceso separado, comunica por MQTT (respaldo: Flask dentro de core) | Cerrada |
-| D4 | Contrato con /v1/systemone | Formato fijado; timeout 15 s y umbral 0,92 provisionales (ver `decisiones/D4-contrato-systemone.md`); error → amarillo | Cerrada en F1 (valores a reconfirmar en F2/F4) |
+| D4 | Contrato con /v1/systemone | Formato fijado; timeout 45 s (medido en la RPi 4); calentamiento al arrancar; umbral 0,92 provisional; REQ-N05 no se cumple y se reporta (ver `decisiones/D4-contrato-systemone.md`); error → amarillo | Cerrada (umbral a reconfirmar en F4/F7) |
 | D5 | OLED | Controlador propio sobre smbus2 (respaldo: sin OLED) | F2 |
 | D6 | Simulación | Muestras crudas inyectables; Ollama real en Docker, falso en QEMU | Cerrada |
 | D7 | Configuración y recarga | Archivo + aviso `cmd/recargar` | F4 |
