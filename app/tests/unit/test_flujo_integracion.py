@@ -44,9 +44,13 @@ class Sistema:
 
     def reportar(self, texto, id="r"):
         n = len(self.eventos)
-        self.web.publicar(topicos.REPORTE, {"id": id, "texto": texto, "ts_navegador": 1.0})
-        assert esperar(lambda: len(self.eventos) > n, 5), "sin evento"
-        return self.eventos[-1]
+        # El broker puede no haber registrado aún la suscripción del core: si el primer
+        # reporte se pierde, se reintenta (un reporte real lo reenvía el operario).
+        for _ in range(3):
+            self.web.publicar(topicos.REPORTE, {"id": id, "texto": texto, "ts_navegador": 1.0})
+            if esperar(lambda: len(self.eventos) > n, 2):
+                return self.eventos[-1]
+        raise AssertionError("sin evento")
 
     def ultima(self):
         return self.salidas[-1]
@@ -69,8 +73,9 @@ def test_cu03_falla_que_los_sensores_no_ven(sis):
     ev = sis.reportar("Salen chispas del cable y huele a quemado")
     assert (ev["categoria"], ev["accion"], ev["area"]) == ("falla_electrica", "parar_maquina",
                                                            "mantenimiento")
-    assert esperar(lambda: sis.ultima()["maquina"] is False, 3)
-    assert sis.ultima()["luz"] == "roja" and sis.ultima()["zumbador"] is True
+    # La máquina se detiene primero; luz roja y zumbador llegan un instante después.
+    assert esperar(lambda: sis.ultima()["maquina"] is False and sis.ultima()["luz"] == "roja"
+                   and sis.ultima()["zumbador"] is True, 3)
     assert not sis.sensores.seguridad.activo        # no fue un paro por umbral
     assert sis.core.estado == "detenida"
 

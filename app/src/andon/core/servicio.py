@@ -38,6 +38,8 @@ COLA_MAX = 8
 ACCION_PARO_ACTIVO = "paro_activo"       # había un paro retenido: se clasificó pero no se actuó
 ACCION_YA_DETENIDA = "maquina_detenida"  # ya estaba detenida por una falla: luz roja intacta
 ACCION_DESCARTADO = "descartado"         # cola llena
+CODIGOS_ERROR = ((ollama.ErrorTimeout, "timeout"), (ollama.ErrorConexion, "conexion"),
+                 (ollama.ErrorRespuesta, "respuesta"))
 OLED = {
     "operacion_normal": ["OPERANDO", "Todo normal"],
     "falla_mecanica": ["FALLA MECANICA", "Mantenimiento"],
@@ -183,7 +185,7 @@ class Core:
             log.error("cola de reportes llena: reporte descartado")
             with self._lock:
                 self._cerrar_evento(item, None, None, None, ACCION_DESCARTADO,
-                                    "cola llena", self._lecturas())
+                                    ("cola_llena", "cola de reportes llena"), self._lecturas())
 
     # ------------------------------------------------------------------ trabajo
     def _trabajador(self):
@@ -212,8 +214,9 @@ class Core:
             res = self._clasificar(item["texto"], lecturas["vib_rms_g"], lecturas["temp_c"],
                                    url=o.url, modelo=o.modelo, timeout_s=o.timeout_s)
         except ollama.ErrorOllama as e:
-            error = f"{type(e).__name__}: {e}"
-            log.warning("Ollama falló, revisión manual: %s", error)
+            codigo = next((c for tipo, c in CODIGOS_ERROR if isinstance(e, tipo)), "ollama")
+            error = (codigo, f"{type(e).__name__}: {e}")
+            log.warning("Ollama falló, revisión manual: %s", error[1])
         with self._lock:
             umbral = self.cfg.ollama.umbral_confianza
             cat = res.categoria if res else None
@@ -251,14 +254,16 @@ class Core:
         return {"vib_rms_g": self._vib, "temp_c": self._temp}
 
     def _cerrar_evento(self, item, cat, prob, area, accion, error, lecturas):
+        """`error` es None o (código corto para la web, detalle para el registro)."""
         latencia = round((self._reloj() - item["recibido"]) * 1000)
-        evento = {"ts": self._ahora(), "lecturas": lecturas, "texto": item["texto"],
-                  "categoria": cat, "prob": prob, "accion": accion, "area": area,
-                  "latencia_ms": latencia}
+        codigo, detalle = error or (None, None)
+        evento = {"id": item["id"], "ts": self._ahora(), "lecturas": lecturas,
+                  "texto": item["texto"], "categoria": cat, "prob": prob, "accion": accion,
+                  "area": area, "latencia_ms": latencia, "error": codigo}
         self.registro.guardar({
             "reporte_id": item["id"], "ts": evento["ts"], "vib_rms_g": lecturas["vib_rms_g"],
             "temp_c": lecturas["temp_c"], "texto": item["texto"], "categoria": cat, "prob": prob,
-            "accion": accion, "area": area, "latencia_ms": latencia, "error": error})
+            "accion": accion, "area": area, "latencia_ms": latencia, "error": detalle})
         self.ultimo_evento = evento
         self.mqtt.publicar(topicos.EVENTO, evento)
         self._publicar_estado()

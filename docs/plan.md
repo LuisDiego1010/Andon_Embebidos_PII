@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-06
+Última actualización: 2026-11-06 (F4 cerrada en Docker; guía de continuación en `docs/traspaso.md`)
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
@@ -36,6 +36,7 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo; modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
 | D12 | Tópico `salidas` | Estado real de las salidas (retenido, sensores → web), en sim y en la placa (`decisiones/D12-topico-salidas.md`) | Cerrada |
 | D13 | Falla de sensor | 2 s sin lectura válida → paro retenido, `sensor: "*_fallo"` (`decisiones/D13-falla-de-sensor.md`) | Cerrada |
+| D14 | `evento` con `id` y `error` | Cambio de contrato aprobado en F4 (`decisiones/D14-evento-con-id-y-error.md`) | Cerrada |
 
 ## Niveles de prueba
 
@@ -129,8 +130,9 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 - [x] Configuración y recarga → **cierra D7**
 - [x] Nivel 2 (arm64) en verde
 - [x] Sección de `docs/pruebas.md`: CU-03, CU-04, CU-05
+- [ ] 3b: `andon-core` y `andon-sensores` en la RPi 4 en modo sim con el Ollama real — **pendiente de probar en la placa**
 
-**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama` ✅ (6 nov). Pendiente de F4: confirmar si `evento` lleva `id` y `error` (contrato MQTT).
+**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama` ✅ (6 nov). Falta la prueba en la placa (3b del core).
 
 ### F5 · andon-web
 - [ ] Formulario (≤ 280 caracteres), resultado en pantalla, hora del navegador → **cierra D9**

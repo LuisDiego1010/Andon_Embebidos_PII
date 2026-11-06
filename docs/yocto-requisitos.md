@@ -211,3 +211,24 @@ Detalle en `docs/decisiones/`.
 - Sigue sin existir `__main__.py` de `andon.core` (F4) y de `andon.web` (F5): esas dos
   unidades se quedan desactivadas.
 
+
+---
+
+# Notas v1.4 (2026-11-06) · F4 entregada: `andon.core`
+
+- **`python3 -m andon.core` ya existe** (`andon/core/__main__.py`): `andon-core.service` puede
+  activarse. Código de salida 1 si no puede abrir el registro SQLite (systemd reintenta) y 2 si la
+  configuración es inválida.
+- **Datos:** `andon-core` crea `/var/lib/andon/andon.db` (`StateDirectory=andon` en la unidad ya lo
+  deja escribible por `andon`). No hace falta nada nuevo en la imagen.
+- **Orden de arranque:** la unidad actual (`After=mosquitto.service ollama.service`) es correcta. Al
+  arrancar, el core llama a Ollama una vez para cargar el modelo (≈ 37 s en frío en la RPi 4,
+  `[ollama] calentar = true`); mientras tanto `estado` es `calentando` y los reportes igual se atienden.
+- **CPU:** durante una consulta (≈ 17 s) Ollama usa los 4 núcleos. En el 3b de `andon-sensores` esto
+  no retrasó el paro (272–363 ms, 0 retrasos), así que **no se piden** `Nice` ni afinidad por ahora.
+  Se repetirá con el core activo en la placa (pendiente).
+- **Contrato:** `evento` gana `id` y `error` (D14). Sin impacto en la imagen.
+- **Configuración:** `cmd/recargar` hace que el core relea `/etc/andon/andon.conf` (D7).
+- `andon-web` (F5) sigue sin `__main__.py`: su unidad se queda desactivada.
+- **Pendiente de probar en la placa:** `andon-core` y `andon-sensores` juntos en modo sim con el
+  Ollama real de la imagen (procedimiento en `docs/pruebas.md`).

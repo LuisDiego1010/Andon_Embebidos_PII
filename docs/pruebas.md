@@ -111,7 +111,7 @@ fue a revisión manual. La confianza depende de la redacción (D4, hallazgo 4): 
 usa la frase de la tabla (0,987). En la RPi 4 la latencia será ≈ 17 s por reporte (REQ-N05 no se cumple, D4);
 durante el análisis la luz queda amarilla («Analizando…») y la web no se bloquea.
 
-Pendiente: repetir en la RPi 4 con la imagen (nivel 3b, `andon-core` + `andon-sensores` en modo sim).
+**Pendiente de probar en la placa:** repetir en la RPi 4 con la imagen (nivel 3b, `andon-core` + `andon-sensores` en modo sim, drop-in de la sección «Nivel 3b», Ollama de la imagen). Se espera ≈ 17 s por reporte, la luz amarilla «Analizando…» durante la consulta, el paro por umbral < 1 s mientras Ollama calcula y `andon.db` creado en `/var/lib/andon`. Procedimiento: copiar la app como en «Nivel 3b», `systemctl start andon-sensores andon-core` (con el drop-in sim en `andon-sensores`) y enviar los reportes con `python3 /opt/andon/enviar_reporte.py --host 127.0.0.1 "..."` (copiar `app/tools/enviar_reporte.py`).
 
 ## Nivel 3b · la RPi 4 con la imagen Yocto, `ANDON_MODO=sim`
 

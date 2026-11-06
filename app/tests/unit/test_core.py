@@ -250,9 +250,20 @@ def test_evento_con_los_campos_del_contrato(e):
     e.t = 100.0
     e.clasif.resultado = ("problema_calidad", 0.95)
     ev = e.reporte("piezas rayadas")
-    assert set(ev) == {"ts", "lecturas", "texto", "categoria", "prob", "accion", "area",
-                       "latencia_ms"}
+    assert set(ev) == {"id", "ts", "lecturas", "texto", "categoria", "prob", "accion", "area",
+                       "latencia_ms", "error"}
     assert ev["texto"] == "piezas rayadas" and ev["prob"] == 0.95 and ev["accion"] == "avisar"
+    assert ev["id"] == "r1" and ev["error"] is None
+
+
+@pytest.mark.parametrize("exc,codigo", [(ollama.ErrorTimeout("t"), "timeout"),
+                                        (ollama.ErrorConexion("c"), "conexion"),
+                                        (ollama.ErrorRespuesta("r"), "respuesta")])
+def test_evento_informa_el_codigo_del_fallo_de_ollama(e, exc, codigo):
+    e.clasif.error = exc
+    assert e.reporte(id="x9")["error"] == codigo
+    assert e.broker.ultimo(topicos.EVENTO)["id"] == "x9"
+    assert type(exc).__name__ in e.core.registro.ultimos(1)[0]["error"]   # el detalle queda en el registro
 
 
 def test_latencia_incluye_la_espera_en_la_cola(e):
@@ -303,6 +314,7 @@ def test_cola_llena_descarta_y_deja_constancia(e):
     e.web.publicar(topicos.REPORTE, {"id": 99, "texto": "ruido"})
     assert e.core._cola.qsize() == 8
     assert e.broker.ultimo(topicos.EVENTO)["accion"] == "descartado"
+    assert e.broker.ultimo(topicos.EVENTO)["error"] == "cola_llena" and e.broker.ultimo(topicos.EVENTO)["id"] == "99"
     assert e.core.registro.ultimos(1)[0]["reporte_id"] == "99"
 
 
