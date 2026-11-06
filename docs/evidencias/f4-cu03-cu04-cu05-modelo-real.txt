@@ -1,0 +1,38 @@
+F4 · CU-03, CU-04, CU-05 en Docker con el modelo real (tev1:0.8b, Ollama 0.40.14 en la PC)
+andon-sensores (sim) + andon-core + Mosquitto reales; reportes enviados con tools/enviar_reporte.py.
+6 nov 2026. El primer reporte tras calentar tardó 3,6–3,9 s (PC x86); la placa dará ≈ 17 s (D4).
+
+CU-03 · falla que los sensores no ven («Huele a quemado y salió una chispa del cable de alimentación»)
+  categoría falla_electrica, prob 0,987 → acción parar_maquina, área mantenimiento, 3692 ms
+  secuencia MQTT: cmd/senal amarilla («Analizando…») → cmd/maquina parar (origen core)
+  → cmd/senal roja + zumbador → salidas {maquina:false, luz:roja, zumbador:true}; seguridad sin paro.
+  Reinicio (origen web): salidas {maquina:true, luz:verde}; estado → reposo.
+  Hallazgo: «Salen chispas del cable y huele a quemado cerca del motor» dio 0,886 < 0,92 →
+  revision_manual (amarilla, la máquina sigue). La confianza depende de la redacción (D4, hallazgo 4):
+  para la demostración usar la frase de arriba (0,987) u otras del conjunto de contrato (≥ 0,986).
+
+CU-04 · reporte de calidad («Las piezas salen rayadas y fuera de especificación»)
+  problema_calidad, prob 0,999 → avisar, área calidad, luz amarilla, máquina sigue, 3623 ms
+
+CU-05 · reporte ambiguo («Algo raro pasa, no sé qué es»)
+  falla_mecanica, prob 0,684 < 0,92 → revision_manual, área supervision, luz amarilla, máquina sigue, 3566 ms
+
+Operación normal («Todo funciona bien, la máquina corre sin problemas»)
+  operacion_normal, prob 0,9999 → ninguna, luz verde, 3609 ms
+
+Traza MQTT del CU-03:
+2026-11-06T10:58:30-0600 andon/e1/salidas {"ts": 1793984222.713, "maquina": true, "luz": "verde", "zumbador": false, "oled": ["OPERANDO", "Todo normal"]}
+2026-11-06T10:58:32-0600 andon/e1/cmd/senal {"luz": "amarilla", "zumbador": false, "oled": ["ANALIZANDO", "Espere..."]}
+2026-11-06T10:58:32-0600 andon/e1/salidas {"ts": 1793984312.237, "maquina": true, "luz": "amarilla", "zumbador": false, "oled": ["OPERANDO", "Todo normal"]}
+2026-11-06T10:58:32-0600 andon/e1/salidas {"ts": 1793984312.237, "maquina": true, "luz": "amarilla", "zumbador": false, "oled": ["ANALIZANDO", "Espere..."]}
+2026-11-06T10:58:35-0600 andon/e1/cmd/senal {"luz": "roja", "zumbador": true, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/cmd/maquina {"accion": "parar", "origen": "core"}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.887, "maquina": true, "luz": "roja", "zumbador": false, "oled": ["ANALIZANDO", "Espere..."]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.887, "maquina": true, "luz": "roja", "zumbador": true, "oled": ["ANALIZANDO", "Espere..."]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.887, "maquina": true, "luz": "roja", "zumbador": true, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.888, "maquina": false, "luz": "roja", "zumbador": true, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/cmd/maquina {"accion": "reiniciar", "origen": "web"}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.933, "maquina": false, "luz": "roja", "zumbador": false, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.934, "maquina": false, "luz": "verde", "zumbador": false, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.934, "maquina": true, "luz": "verde", "zumbador": false, "oled": ["FALLA ELECTRICA", "Mantenimiento"]}
+2026-11-06T10:58:35-0600 andon/e1/salidas {"ts": 1793984315.934, "maquina": true, "luz": "verde", "zumbador": false, "oled": ["OPERANDO"]}
