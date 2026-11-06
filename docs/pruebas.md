@@ -42,7 +42,7 @@ Leyenda: ✅ probado · 🟡 parcial · ⏳ pendiente · ❌ no cumple · — no
 | REQ-N01 sin Internet | 🟡 | 🟡 | Modelo y servicios locales (Diego); se cierra en F7 |
 | REQ-N02 RPi + Yocto | — | 🟡 | La imagen arranca en la RPi 4; falta la app activa |
 | REQ-N03 Ollama y modelo preinstalados | — | ✅ | `ollama list` en la imagen, sin descargas (Diego, 5 nov; verificado 6 nov) |
-| REQ-N04 paro < 1 s | ✅ | ⏳ | Sim en PC: ≈ 200 ms desde la inyección y 0,7–1,1 ms desde la muestra que cruza el umbral. Falta 3b (Ollama calculando) y sensores reales |
+| REQ-N04 paro < 1 s | ✅ | ⏳ | Sim en PC: ≈ 200 ms desde la inyección y 0,7–1,1 ms desde la muestra que cruza el umbral. 3b en la RPi 4 con Ollama calculando: 272–363 ms desde la inyección, 0 retrasos del lazo. Faltan sensores reales |
 | REQ-N05 clasificación ≤ 3 s | — | ❌ | ≈ 17 s en la RPi 4; no se cumple y se reporta (D4) |
 | REQ-N06 arranque automático (systemd) | ⏳ F6 | ⏳ | Unidades en la imagen, desactivadas hasta tener `__main__.py` |
 | REQ-N07 ningún GPIO > 3,3 V | — | ⏳ | Reglas en `docs/hardware.md`; se verifica al cablear |
@@ -77,11 +77,11 @@ docker compose -f docker/compose.yaml --profile sim stop sensores
 | D13 falla de sensor | Sensor sin lectura > 2 s (prueba automática) | Paro retenido `mpu6050_fallo` / `ds18b20_fallo` | ✅ |
 | D11 modo sim seguro | `sim/inyectar` con `ANDON_MODO=rpi` | Se ignora (no se suscribe) | ✅ prueba automática |
 
-Pendientes de estos CU: sensores reales (bloque hardware) y el nivel 3b de abajo.
+Pendientes de estos CU: sensores reales (bloque hardware). El nivel 3b se ejecutó el 6 nov (abajo).
 
 ## Nivel 3b · la RPi 4 con la imagen Yocto, `ANDON_MODO=sim`
 
-Pendiente de ejecutar (bloqueado por permisos el 6 nov). Valida systemd, el usuario
+**Ejecutado el 6 nov** (evidencia: `docs/evidencias/f3-3b-rpi-sim.txt`). Valida systemd, el usuario
 `andon` y el paro con Ollama calculando (REQ-N04 bajo contención de CPU). Desde la PC:
 
 ```bash
@@ -108,6 +108,11 @@ python3 /opt/andon/inyector.py --host 127.0.0.1 --reiniciar
 python3 /opt/andon/inyector.py --host 127.0.0.1 --vib-g 2.0 --esperar-paro
 journalctl -u andon-sensores | grep -E "se retras|PARO"      # sin retrasos = el lazo aguanta
 ```
+
+**Resultado:** paro de 304 ms sin carga y de 272–363 ms con Ollama calculando (carga de CPU 2,8);
+desde la muestra que cruza el umbral hasta la máquina detenida, 1–2 ms; 0 avisos «se retrasó». Cumple
+REQ-N04 con margen en la placa (aún con sensores simulados). Al repetir una inyección hay que esperar a
+que expire la falla (`--duracion-s`) antes de reiniciar, o el sistema vuelve a parar (correcto).
 
 Esperado: paro < 1 s con y sin Ollama; ningún aviso «se retrasó». Si aparece, ver D11
 (prioridad `Nice`, afinidad de núcleo, `OLLAMA_NUM_THREAD`). Para volver al estado normal:

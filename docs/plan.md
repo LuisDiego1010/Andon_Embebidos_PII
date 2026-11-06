@@ -115,9 +115,9 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 - [x] `__main__.py`, inyector de fallas (`tools/inyector.py`) y servicio `sensores` en `compose.yaml`
 - [x] Paro medido < 1 s en simulación (≈ 200 ms desde la inyección; prueba en tiempo real)
 - [x] Sección de `docs/pruebas.md`: CU-01 y CU-02 (simulación)
-- [ ] 3b: servicio en la RPi 4 en modo sim, con y sin Ollama calculando (procedimiento en `docs/pruebas.md`)
+- [x] 3b: servicio en la RPi 4 en modo sim, con y sin Ollama calculando — paro 272–363 ms, 0 retrasos (6 nov; `docs/evidencias/f3-3b-rpi-sim.txt`)
 
-**Criterio de salida:** CU-02 en simulación (Docker) ✅. La verificación en hardware pasa al Bloque hardware; 3b pendiente.
+**Criterio de salida:** CU-02 en simulación (Docker) ✅. La verificación en hardware pasa al Bloque hardware; 3b ✅ (6 nov).
 
 ### F4 · andon-core
 - [ ] `tools/fake_ollama.py` (adelantado de F6: pruebas deterministas del core)
