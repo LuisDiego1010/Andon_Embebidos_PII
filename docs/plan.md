@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-06
+Última actualización: 2026-11-06 (F4 cerrada en Docker; guía de continuación en `docs/traspaso.md`)
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
@@ -29,13 +29,14 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D4 | Contrato con /v1/systemone | Formato fijado; timeout 45 s (medido en la RPi 4); calentamiento al arrancar; umbral 0,92 provisional; REQ-N05 no se cumple y se reporta (ver `decisiones/D4-contrato-systemone.md`); error → amarillo | Cerrada (umbral a reconfirmar en F4/F7) |
 | D5 | OLED | Controlador propio sobre smbus2 (respaldo: sin OLED) | F2 |
 | D6 | Simulación | Muestras crudas inyectables; Ollama real en Docker, falso en QEMU | Cerrada |
-| D7 | Configuración y recarga | Archivo + aviso `cmd/recargar` | F4 |
+| D7 | Configuración y recarga | Archivo + aviso `cmd/recargar` (`decisiones/D7-configuracion-y-recarga.md`) | Cerrada (F4) |
 | D8 | Acceso supervisor/admin | PIN en la configuración | F5 |
 | D9 | Hora sin Internet | Hora del navegador enviada por el formulario | F5 |
 | D10 | Tablero | MQTT + página `/tablero` | F5 |
 | D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo; modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
 | D12 | Tópico `salidas` | Estado real de las salidas (retenido, sensores → web), en sim y en la placa (`decisiones/D12-topico-salidas.md`) | Cerrada |
 | D13 | Falla de sensor | 2 s sin lectura válida → paro retenido, `sensor: "*_fallo"` (`decisiones/D13-falla-de-sensor.md`) | Cerrada |
+| D14 | `evento` con `id` y `error` | Cambio de contrato aprobado en F4 (`decisiones/D14-evento-con-id-y-error.md`) | Cerrada |
 
 ## Niveles de prueba
 
@@ -120,17 +121,18 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 **Criterio de salida:** CU-02 en simulación (Docker) ✅. La verificación en hardware pasa al Bloque hardware; 3b ✅ (6 nov).
 
 ### F4 · andon-core
-- [ ] `tools/fake_ollama.py` (adelantado de F6: pruebas deterministas del core)
-- [ ] Máquina de estados con pruebas por transición
-- [ ] Cliente de Ollama (urllib) con timeout; error → amarillo; calentamiento al arrancar (D4)
-- [ ] `__main__.py` de `andon.core`
-- [ ] Umbral de confianza y Tabla 9
-- [ ] Registro SQLite; publicación de `evento` y `estado`
-- [ ] Configuración y recarga → **cierra D7**
-- [ ] Nivel 2 (arm64) en verde
-- [ ] Sección de `docs/pruebas.md`: CU-03, CU-04, CU-05
+- [x] `tools/fake_ollama.py` (adelantado de F6: pruebas deterministas del core)
+- [x] Máquina de estados con pruebas por transición
+- [x] Cliente de Ollama (urllib) con timeout; error → amarillo; calentamiento al arrancar (D4)
+- [x] `__main__.py` de `andon.core`
+- [x] Umbral de confianza y Tabla 9
+- [x] Registro SQLite; publicación de `evento` y `estado`
+- [x] Configuración y recarga → **cierra D7**
+- [x] Nivel 2 (arm64) en verde
+- [x] Sección de `docs/pruebas.md`: CU-03, CU-04, CU-05
+- [ ] 3b: `andon-core` y `andon-sensores` en la RPi 4 en modo sim con el Ollama real — **pendiente de probar en la placa**
 
-**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama`.
+**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama` ✅ (6 nov). Falta la prueba en la placa (3b del core).
 
 ### F5 · andon-web
 - [ ] Formulario (≤ 280 caracteres), resultado en pantalla, hora del navegador → **cierra D9**

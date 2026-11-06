@@ -48,5 +48,22 @@ services:
       - mosquitto
     command: ["python", "-m", "andon.sensores"]
 
+  # andon-core. Usa el Ollama real de este compose (o ANDON_OLLAMA_URL=http://host:puerto con
+  # tools/fake_ollama.py). Arranque:  docker compose -f docker/compose.yaml --profile sim up -d core
+  core:
+    profiles: ["sim"]
+    image: andon-dev
+    working_dir: /work
+    volumes:
+      - ..:/work
+    environment:
+      ANDON_MODO: sim
+      ANDON_MQTT_HOST: mosquitto
+      ANDON_OLLAMA_URL: ${ANDON_OLLAMA_URL:-http://ollama:11434}
+      ANDON_DB_RUTA: /tmp/andon.db
+    depends_on:
+      - mosquitto
+    command: ["python", "-m", "andon.core"]
+
 volumes:
   ollama-modelos:

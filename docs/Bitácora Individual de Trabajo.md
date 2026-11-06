@@ -16,6 +16,7 @@
 | :---: | :--- | :---: |
 | 16/10/2026 | Investigación sobre Ollama y modelos JEV (`/v1/systemone`), análisis comparativo y evaluación de propuestas de aplicación (Smart Agriculture vs. Triaje e-Health) para la demostración presencial. | Virtual |
 | 04/11/2026 | Fase 1 de la app (Estación Andon): estructura del repositorio; entorno Docker con Mosquitto, Ollama 0.40.14 y `tev1:0.8b`; descubrimiento del formato real de `/v1/systemone` por sondeo de la API; cliente en Python (`urllib`) con manejo de errores; pruebas unitarias y de contrato con 19 reportes de ejemplo; decisión D4 y requisitos v1 para la imagen Yocto. | Virtual |
+| 06/11/2026 | Diagnóstico de la latencia en la Raspberry Pi 4 (≈ 17 s por consulta; `tev1:4b` descartado; calentamiento del modelo al arrancar); capa de hardware (interfaz, simulador de muestras a 100 Hz y controlador de la RPi con libgpiod v2) probada con dobles y en la placa; decisiones D7 y D11–D14 (simulación primero, tópico `salidas`, falla de sensor, `evento` con `id` y `error`); `andon-sensores` con lazo de seguridad de 100 Hz, paro retenido y falla de sensor, medido en la RPi 4 con Ollama calculando (paro de 272–363 ms); `andon-core` con máquina de estados, Tabla 9, registro SQLite y recarga de configuración; CU-01 a CU-06 en simulación y CU-03, CU-04 y CU-05 con el modelo real; guía de continuación (`docs/traspaso.md`). | Virtual y presencial (laboratorio) |
 
 ---
 
@@ -27,6 +28,12 @@
 * Cliente de `/v1/systemone` (`app/src/andon/core/ollama.py`) con 17 pruebas en verde (14 unitarias, 3 de contrato).
 * Documento de decisión D4 (`docs/decisiones/D4-contrato-systemone.md`): esquema de solicitud y respuesta, timeout y umbral de confianza provisionales, y resultados medidos.
 * `docs/yocto-requisitos.md` v1, con paquetes, dispositivos, rutas y preguntas abiertas para el encargado de la imagen Yocto.
+* Capa de hardware (`app/src/andon/hal/`): interfaz común, simulador y controlador de la RPi 4; mapa de pines en `docs/hardware.md`.
+* Servicio `andon-sensores` (lazo de seguridad de 100 Hz, paro retenido que sobrevive a reinicios, falla de sensor → paro) y herramientas de prueba (`inyector.py`, `probar_hal.py`).
+* Servicio `andon-core` (máquina de estados, Tabla 9 y umbral de confianza, registro SQLite, publicación de `evento` y `estado`, recarga de configuración) y herramientas `fake_ollama.py` y `enviar_reporte.py`.
+* Decisiones D7 (configuración y recarga), D11 (estrategia de simulación), D12 (tópico `salidas`), D13 (falla de sensor) y D14 (`evento` con `id` y `error`).
+* Pruebas: 277 unitarias y de integración en verde en x86 y aarch64 (emuladas); evidencias en `docs/evidencias/` (CU-01 a CU-06 en simulación, nivel 3b en la RPi 4, CU-03/04/05 con el modelo real).
+* `docs/traspaso.md`: estado, pendientes, contrato MQTT, invariantes y forma de trabajar, para que el equipo continúe la app.
 
 ---
 
@@ -39,6 +46,12 @@
 * La latencia de clasificación fue de ≈ 4,1 s en la PC, sobre la meta de 3 s (REQ-N05), y crece con el tamaño del prompt. **Solución:** pendiente; se medirá en la Raspberry Pi 4 y se evaluará acortar el prompt.
 * Los reportes ambiguos obtuvieron probabilidades de 0,83–0,90, no bajas. **Solución:** umbral de confianza provisional de 0,92, a recalibrar con más reportes.
 * El constructor de Docker en contenedor no resolvía DNS. **Solución:** construir con el constructor `default` (`BUILDX_BUILDER=default`).
+* La latencia en la RPi 4 es ≈ 17 s por reporte (≈ 4 s en la PC), y no mejora con la CPU en modo `performance`. **Solución:** el tiempo es casi todo lectura del prompt (≈ 11,6 ms por token de entrada); no se alcanza la meta de 3 s (REQ-N05) y se reporta. Se mitiga con el calentamiento al arrancar, luz amarilla «Analizando…» durante la consulta y un paro de seguridad independiente del modelo.
+* La placa no tiene sensores ni actuadores todavía. **Solución:** estrategia de simulación primero (D11): el simulador entrega muestras crudas, de modo que el cálculo del RMS y los umbrales son el mismo código que en la placa; la RPi corre en modo sim (nivel 3b) y la verificación con hardware queda en un «Bloque hardware» sin fecha.
+* El cable directo a la placa no entrega DHCP. **Solución:** acceso por SSH con dirección IPv6 de enlace local.
+* Con el modelo real, un reporte del CU-03 dio probabilidad 0,886 (bajo el umbral de 0,92) y fue a revisión manual. **Solución:** la confianza depende de la redacción (D4); la demostración usa una frase que el modelo clasifica con 0,987. Se recalibrará el umbral con más reportes.
+* `docker compose run` intentaba recrear Ollama por una diferencia de versión entre el pin y el contenedor (≈ 8 GB). **Solución:** usar `--no-deps` y recrearlo cuando haya buena red.
+* Una prueba de integración fallaba de forma intermitente por una carrera entre mensajes MQTT (la máquina se detiene antes que se publique la luz roja). **Solución:** esperar el estado completo en la prueba; 8 corridas seguidas en verde.
 
 ---
 

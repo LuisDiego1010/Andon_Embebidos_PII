@@ -2,7 +2,7 @@
 
 Ruta: variable ANDON_CONF (por defecto /etc/andon/andon.conf). Variables que
 sobrescriben el archivo: ANDON_MODO, ANDON_MQTT_HOST, ANDON_MQTT_PUERTO,
-ANDON_OLLAMA_URL, ANDON_PARO_RUTA. Un archivo ausente no es error: se usan los valores por defecto.
+ANDON_OLLAMA_URL, ANDON_PARO_RUTA, ANDON_DB_RUTA. Un archivo ausente no es error: se usan los valores por defecto.
 """
 
 import configparser
@@ -171,6 +171,9 @@ def cargar(ruta=None, entorno=None):
     paro = env.get("ANDON_PARO_RUTA")
     if paro:
         c = replace(c, paro_ruta=paro.strip())
+    db = env.get("ANDON_DB_RUTA")
+    if db:
+        c = replace(c, db_ruta=db.strip())
     url = env.get("ANDON_OLLAMA_URL")
     if url:
         c = replace(c, ollama=replace(c.ollama, url=url.strip()))

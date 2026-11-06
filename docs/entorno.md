@@ -80,6 +80,12 @@ Leyenda: ✅ cumple · ❌ falta o no cumple · ⚠️ cumple con observaciones 
    falla al resolver `registry-1.docker.io`. Solución: usar el builder `default`, que toma
    la imagen local: `BUILDX_BUILDER=default docker compose -f docker/compose.yaml up -d --build`.
    No se cambió la configuración del builder.
+9. **`docker compose run/up` recrea Ollama (2026-11-06).** `compose.yaml` fija `ollama/ollama:0.40.13`
+   (la versión de la imagen Yocto) y el contenedor en ejecución es 0.40.14: cualquier `run` o
+   `up` que arrastre la dependencia `ollama` intenta bajar ≈ 8 GB. Para las pruebas se usa
+   `docker compose -f docker/compose.yaml run --rm --no-deps dev pytest app/tests/unit` y para los
+   servicios `up -d --no-deps sensores core`. Se recrea Ollama (y se repiten los 19 reportes
+   del contrato) cuando haya buena red.
 
 ## Instalación realizada
 

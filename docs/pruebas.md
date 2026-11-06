@@ -33,12 +33,12 @@ Leyenda: ✅ probado · 🟡 parcial · ⏳ pendiente · ❌ no cumple · — no
 | REQ-F03 formulario web (≤ 280) | ⏳ F5 | — | |
 | REQ-F04 estado → `/v1/systemone` | ✅ | ✅ | Cliente probado en Docker y en la RPi 4 (D4) |
 | REQ-F05 cinco categorías | ✅ | ✅ | 16/16 reportes claros; conjunto pequeño y fácil |
-| REQ-F06 área responsable | ⏳ F4 | — | |
+| REQ-F06 área responsable | ✅ F4 | — | Tabla 9: mantenimiento, calidad o supervisión en cada `evento` (CU-03/04/05, modelo real) |
 | REQ-F07 paro por umbral sin modelo | ✅ | ⏳ | Decidido en `andon-sensores` sin MQTT ni modelo. Umbrales provisionales hasta calibrar |
-| REQ-F08 amarillo si baja confianza | 🟡 | ⏳ | Los fallos del cliente ya se detectan; falta la regla del umbral (F4) |
+| REQ-F08 amarillo si baja confianza | ✅ F4 | ⏳ | Probabilidad < 0,92, timeout, error HTTP o JSON inválido → amarilla y revisión manual, sin parar la máquina (pruebas unitarias y CU-05 con el modelo real) |
 | REQ-F09 torre, zumbador, OLED | 🟡 F2–F3 | ⏳ | Salidas probadas con dobles y GPIO abierto en la placa; sin torre conectada. OLED pendiente (D5) |
-| REQ-F10 registro de eventos | ⏳ F4 | — | |
-| REQ-F11 publicación MQTT | 🟡 F3 | — | `lecturas`, `seguridad` y `salidas` publicados; falta `evento` (F4) |
+| REQ-F10 registro de eventos | ✅ F4 | ⏳ | SQLite (`db_ruta`): fecha, lecturas, texto, categoría, probabilidad, acción, área, latencia y error. Falta verificar la escritura en `/var/lib/andon` de la placa |
+| REQ-F11 publicación MQTT | ✅ F3–F4 | ⏳ | `lecturas`, `seguridad`, `salidas`, `evento` y `estado` publicados con Mosquitto real |
 | REQ-N01 sin Internet | 🟡 | 🟡 | Modelo y servicios locales (Diego); se cierra en F7 |
 | REQ-N02 RPi + Yocto | — | 🟡 | La imagen arranca en la RPi 4; falta la app activa |
 | REQ-N03 Ollama y modelo preinstalados | — | ✅ | `ollama list` en la imagen, sin descargas (Diego, 5 nov; verificado 6 nov) |
@@ -78,6 +78,40 @@ docker compose -f docker/compose.yaml --profile sim stop sensores
 | D11 modo sim seguro | `sim/inyectar` con `ANDON_MODO=rpi` | Se ignora (no se suscribe) | ✅ prueba automática |
 
 Pendientes de estos CU: sensores reales (bloque hardware). El nivel 3b se ejecutó el 6 nov (abajo).
+
+## CU-03, CU-04 y CU-05 en simulación (F4)
+
+Evidencia: `docs/evidencias/f4-cu03-cu04-cu05-modelo-real.txt`. Requisitos: `mosquitto` y `ollama` de
+compose arriba; sin otros `andon-sensores`/`andon-core` publicando. Con `fake_ollama` (sin modelo)
+las mismas pruebas corren en `app/tests/unit/test_flujo_integracion.py`.
+
+```bash
+docker compose -f docker/compose.yaml --profile sim up -d --no-deps sensores core   # --no-deps: no recrea Ollama
+mosquitto_sub -h localhost -t 'andon/e1/#' -v -F '%I %t %p'                          # en otra terminal
+R="docker exec -e ANDON_MQTT_HOST=mosquitto andon-dev-1 python /work/app/tools/enviar_reporte.py"
+$R "Huele a quemado y salió una chispa del cable de alimentación" --reiniciar          # CU-03 y CU-06
+$R "Las piezas salen rayadas y fuera de especificación"                                # CU-04
+$R "Algo raro pasa, no sé qué es"                                                      # CU-05
+docker compose -f docker/compose.yaml --profile sim stop sensores core                # antes de pytest
+```
+
+| Caso | Reporte | Esperado | Resultado (6 nov, PC, modelo real) |
+|---|---|---|---|
+| **CU-03** falla que los sensores no ven | «Huele a quemado y salió una chispa del cable de alimentación» | `falla_electrica` ≥ 0,92 → máquina detenida (primero `cmd/maquina parar`, luego luz roja y zumbador), aviso a mantenimiento; sin paro de seguridad | ✅ 0,987; 3,7 s; luz roja, zumbador, `maquina:false` |
+| **CU-04** reporte de calidad | «Las piezas salen rayadas y fuera de especificación» | `problema_calidad` → luz amarilla, la máquina sigue, aviso a calidad | ✅ 0,999; 3,6 s |
+| **CU-05** reporte ambiguo | «Algo raro pasa, no sé qué es» | Probabilidad < 0,92 → amarilla, revisión manual, la máquina sigue | ✅ 0,684; 3,6 s |
+| Operación normal | «Todo funciona bien, la máquina corre sin problemas» | `operacion_normal` → verde | ✅ 0,9999; 3,6 s |
+| **CU-06** reinicio tras detención del core | `cmd/maquina reiniciar` origen `web` | Máquina en marcha, luz verde, estado `reposo` | ✅ |
+| Ollama colgado / caído | `fake_ollama --modo colgado` (timeout 1 s) | Amarilla y revisión manual; el paro por umbral sigue funcionando | ✅ prueba automática |
+| Paro de seguridad durante el análisis | Falla inyectada mientras se consulta | Gana el paro: sin órdenes de luz ni de máquina; acción `paro_activo` | ✅ pruebas unitarias |
+| Invariante 3 | Cualquier clasificación | El core solo ordena `parar`, nunca arrancar; `reiniciar` con origen `core` se ignora | ✅ |
+
+Hallazgo: «Salen chispas del cable y huele a quemado cerca del motor» dio 0,886 con el modelo real y
+fue a revisión manual. La confianza depende de la redacción (D4, hallazgo 4): la demostración de CU-03
+usa la frase de la tabla (0,987). En la RPi 4 la latencia será ≈ 17 s por reporte (REQ-N05 no se cumple, D4);
+durante el análisis la luz queda amarilla («Analizando…») y la web no se bloquea.
+
+**Pendiente de probar en la placa:** repetir en la RPi 4 con la imagen (nivel 3b, `andon-core` + `andon-sensores` en modo sim, drop-in de la sección «Nivel 3b», Ollama de la imagen). Se espera ≈ 17 s por reporte, la luz amarilla «Analizando…» durante la consulta, el paro por umbral < 1 s mientras Ollama calcula y `andon.db` creado en `/var/lib/andon`. Procedimiento: copiar la app como en «Nivel 3b», `systemctl start andon-sensores andon-core` (con el drop-in sim en `andon-sensores`) y enviar los reportes con `python3 /opt/andon/enviar_reporte.py --host 127.0.0.1 "..."` (copiar `app/tools/enviar_reporte.py`).
 
 ## Nivel 3b · la RPi 4 con la imagen Yocto, `ANDON_MODO=sim`
 

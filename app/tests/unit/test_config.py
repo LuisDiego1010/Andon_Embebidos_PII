@@ -88,4 +88,5 @@ def test_sensores_y_ruta_del_paro(tmp_path):
     c = cargar(r, entorno={})
     assert c.sensores.tolerancia_fallo_s == 3.5 and c.paro_ruta == "/tmp/p.json"
     assert cargar(r, entorno={"ANDON_PARO_RUTA": "/x/y.json"}).paro_ruta == "/x/y.json"
+    assert cargar(r, entorno={"ANDON_DB_RUTA": "/x/a.db"}).db_ruta == "/x/a.db"
     assert config.Config().sensores.tolerancia_fallo_s == 2.0
