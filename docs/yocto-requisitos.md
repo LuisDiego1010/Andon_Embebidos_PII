@@ -191,3 +191,23 @@ Detalle en `docs/decisiones/`.
 4. **Contención de CPU:** durante una consulta, Ollama usa los 4 núcleos ~17 s. Se medirá
    si retrasa el paro de `andon-sensores`; si es así pediré en las unidades `Nice` negativo y
    afinidad de núcleo (`CPUAffinity=`), o limitar los hilos de Ollama (`OLLAMA_NUM_THREAD`).
+
+---
+
+# Notas v1.3 (2026-11-06) · F3 entregada: `andon.sensores`
+
+- **`python3 -m andon.sensores` ya existe** (`andon/sensores/__main__.py`): la unidad
+  `andon-sensores.service` de la receta puede activarse. Termina con código 1 si no puede
+  abrir el hardware (systemd reintenta, `Restart=on-failure`) y con 2 si la configuración es
+  inválida.
+- **Configuración nueva en `andon.conf`:** `[sensores] tolerancia_fallo_s` y
+  `[general] paro_ruta = /var/lib/andon/paro.json`. El archivo de ejemplo de `app/config/`
+  ya los trae (la receta lo copia a `/etc/andon/`).
+- **`/var/lib/andon` debe ser escribible por el usuario `andon`** (guarda `paro.json`; ya lo es:
+  dueño `andon`, 0750). El paro de seguridad queda guardado ahí y sobrevive a reinicios.
+- **Sin sensores conectados**, en modo `rpi` el servicio detiene la máquina a los 2 s y
+  publica `mpu6050_fallo` (D13). Para probar la imagen sin hardware, usar el *drop-in* de
+  modo sim descrito en `docs/pruebas.md` (nivel 3b); no va en la receta.
+- Sigue sin existir `__main__.py` de `andon.core` (F4) y de `andon.web` (F5): esas dos
+  unidades se quedan desactivadas.
+

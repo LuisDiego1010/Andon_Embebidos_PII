@@ -2,7 +2,7 @@
 
 Ruta: variable ANDON_CONF (por defecto /etc/andon/andon.conf). Variables que
 sobrescriben el archivo: ANDON_MODO, ANDON_MQTT_HOST, ANDON_MQTT_PUERTO,
-ANDON_OLLAMA_URL. Un archivo ausente no es error: se usan los valores por defecto.
+ANDON_OLLAMA_URL, ANDON_PARO_RUTA. Un archivo ausente no es error: se usan los valores por defecto.
 """
 
 import configparser
@@ -39,6 +39,11 @@ class Umbrales:
 
 
 @dataclass(frozen=True)
+class SensoresCfg:
+    tolerancia_fallo_s: float = 2.0  # D13: sin lectura válida este tiempo → paro retenido
+
+
+@dataclass(frozen=True)
 class Gpio:
     chip: str = "/dev/gpiochip0"
     maquina: int = 17
@@ -66,9 +71,11 @@ class Web:
 class Config:
     modo: str = "rpi"
     db_ruta: str = "/var/lib/andon/andon.db"
+    paro_ruta: str = "/var/lib/andon/paro.json"  # el paro retenido sobrevive a reinicios
     mqtt: Mqtt = field(default_factory=Mqtt)
     ollama: OllamaCfg = field(default_factory=OllamaCfg)
     umbrales: Umbrales = field(default_factory=Umbrales)
+    sensores: SensoresCfg = field(default_factory=SensoresCfg)
     gpio: Gpio = field(default_factory=Gpio)
     i2c: I2c = field(default_factory=I2c)
     web: Web = field(default_factory=Web)
@@ -103,6 +110,8 @@ def _validar(c):
         raise ErrorConfig("[ollama] umbral_confianza debe estar en (0, 1]")
     if c.ollama.timeout_s <= 0:
         raise ErrorConfig("[ollama] timeout_s debe ser positivo")
+    if c.sensores.tolerancia_fallo_s <= 0:
+        raise ErrorConfig("[sensores] tolerancia_fallo_s debe ser positiva")
     if c.umbrales.vib_rms_g <= 0 or c.umbrales.temp_c <= 0:
         raise ErrorConfig("[umbrales] los umbrales deben ser positivos")
     pines = [c.gpio.maquina, c.gpio.verde, c.gpio.amarilla, c.gpio.roja, c.gpio.zumbador]
@@ -132,12 +141,14 @@ def cargar(ruta=None, entorno=None):
     c = Config(
         modo=general.get("modo", base.modo).strip(),
         db_ruta=general.get("db_ruta", base.db_ruta).strip(),
+        paro_ruta=general.get("paro_ruta", base.paro_ruta).strip(),
         mqtt=_seccion(cp, "mqtt", base.mqtt, {"host": str, "puerto": int}),
         ollama=_seccion(cp, "ollama", base.ollama, {
             "url": str, "modelo": str, "timeout_s": float,
             "umbral_confianza": float, "calentar": bool}),
         umbrales=_seccion(cp, "umbrales", base.umbrales,
                           {"vib_rms_g": float, "temp_c": float}),
+        sensores=_seccion(cp, "sensores", base.sensores, {"tolerancia_fallo_s": float}),
         gpio=_seccion(cp, "gpio", base.gpio, {
             "chip": str, "maquina": int, "verde": int, "amarilla": int,
             "roja": int, "zumbador": int}),
@@ -157,6 +168,9 @@ def cargar(ruta=None, entorno=None):
                                       int(puerto) if puerto else c.mqtt.puerto))
         except ValueError as e:
             raise ErrorConfig(f"ANDON_MQTT_PUERTO: {e}") from e
+    paro = env.get("ANDON_PARO_RUTA")
+    if paro:
+        c = replace(c, paro_ruta=paro.strip())
     url = env.get("ANDON_OLLAMA_URL")
     if url:
         c = replace(c, ollama=replace(c.ollama, url=url.strip()))

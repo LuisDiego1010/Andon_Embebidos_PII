@@ -1,0 +1,45 @@
+Nivel 3b · RPi 4 (imagen Yocto de Diego), andon-sensores en ANDON_MODO=sim, 6 nov 2026
+(reloj de la placa: 5 nov, sin RTC). Código de la rama app/f3-sensores copiado a /opt/andon.
+Ollama 0.40.13 con tev1:0.8b calculando (probar_calentamiento.py); carga de la CPU: 0,45 -> 2,8.
+
+Sin carga
+  vibración 2,0 g  -> PARO 304 ms desde la inyección (máquina detenida en 0,97 ms desde la muestra)
+Con Ollama calculando (carga 2,1 -> 2,8)
+  vibración, 3 inyecciones -> PARO 363 / 332 / 272 ms desde la inyección
+                              (máquina detenida en 1,92 / 1,19 / 1,18 ms desde la muestra)
+  temperatura 90 °C        -> PARO 777 ms desde la inyección (el hilo de temperatura corre a 1 Hz;
+                              máquina detenida en 1,2 ms desde la lectura)
+Avisos «se retrasó» del lazo de 100 Hz en todo el journal: 0
+Reinicio (origen web) tras cada paro: máquina en marcha.
+
+Notas
+  - 'desde la inyección' incluye el relevo MQTT del inyector y el siguiente ciclo de 10 ms del lazo;
+    la cifra de REQ-N04 (muestra que cruza el umbral -> máquina detenida) es la de 1-2 ms.
+  - Un primer intento con Ollama dio «ya estaba en paro»: la falla de 5 s seguía activa al reiniciar y
+    volvió a parar (comportamiento correcto). Se repitió con --duracion-s 2 y espera.
+  - Al terminar se retiró el drop-in sim.conf y se detuvo el servicio.
+
+Journal completo:
+Nov 05 21:14:57 raspberrypi4-64 python3[868]: 2026-11-05 21:14:57,090 INFO andon.sensores.servicio: andon-sensores en marcha (modo sim)
+Nov 05 21:15:11 raspberrypi4-64 python3[868]: 2026-11-05 21:15:11,499 ERROR andon.sensores.servicio: PARO por vibracion: 1.080 (umbral 1.000); máquina detenida en 0.97 ms
+Nov 05 21:15:13 raspberrypi4-64 python3[868]: 2026-11-05 21:15:13,411 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:15:13 raspberrypi4-64 python3[868]: 2026-11-05 21:15:13,996 ERROR andon.sensores.servicio: PARO por vibracion: 1.998 (umbral 1.000); máquina detenida en 0.94 ms
+Nov 05 21:15:27 raspberrypi4-64 python3[868]: 2026-11-05 21:15:27,285 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:15:29 raspberrypi4-64 python3[868]: 2026-11-05 21:15:29,101 ERROR andon.sensores.servicio: PARO por temperatura: 90.000 (umbral 60.000); máquina detenida en 1.2 ms
+Nov 05 21:15:31 raspberrypi4-64 python3[868]: 2026-11-05 21:15:31,190 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:15:32 raspberrypi4-64 python3[868]: 2026-11-05 21:15:32,101 ERROR andon.sensores.servicio: PARO por temperatura: 90.000 (umbral 60.000); máquina detenida en 0.89 ms
+Nov 05 21:16:20 raspberrypi4-64 python3[868]: 2026-11-05 21:16:20,074 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:16:28 raspberrypi4-64 python3[868]: 2026-11-05 21:16:28,599 ERROR andon.sensores.servicio: PARO por vibracion: 1.170 (umbral 1.000); máquina detenida en 1.92 ms
+Nov 05 21:16:33 raspberrypi4-64 python3[868]: 2026-11-05 21:16:33,690 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:16:36 raspberrypi4-64 python3[868]: 2026-11-05 21:16:36,092 ERROR andon.sensores.servicio: PARO por vibracion: 1.135 (umbral 1.000); máquina detenida en 1.19 ms
+Nov 05 21:16:41 raspberrypi4-64 python3[868]: 2026-11-05 21:16:41,170 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+Nov 05 21:16:43 raspberrypi4-64 python3[868]: 2026-11-05 21:16:43,501 ERROR andon.sensores.servicio: PARO por vibracion: 1.001 (umbral 1.000); máquina detenida en 1.18 ms
+Nov 05 21:16:48 raspberrypi4-64 python3[868]: 2026-11-05 21:16:48,562 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+inactive
+0
+andon
+andon.previo
+inyector.py
+probar_calentamiento.py
+probar_hal.py
+pruebas

@@ -16,6 +16,7 @@ services:
       - ollama-modelos:/root/.ollama
 
   dev:
+    image: andon-dev
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
@@ -29,6 +30,23 @@ services:
       - mosquitto
       - ollama
     command: ["sleep", "infinity"]
+
+  # andon-sensores en modo simulado. No arranca con `up -d`; use:
+  #   docker compose -f docker/compose.yaml --profile sim up -d sensores
+  # Deténgalo antes de correr pytest app/tests/unit/test_mqtt_integracion.py
+  sensores:
+    profiles: ["sim"]
+    image: andon-dev
+    working_dir: /work
+    volumes:
+      - ..:/work
+    environment:
+      ANDON_MODO: sim
+      ANDON_MQTT_HOST: mosquitto
+      ANDON_PARO_RUTA: /tmp/andon-paro.json
+    depends_on:
+      - mosquitto
+    command: ["python", "-m", "andon.sensores"]
 
 volumes:
   ollama-modelos:
