@@ -129,6 +129,7 @@ class Sensores:
                 self._fin.wait(espera)
             elif espera < -10 * periodo:
                 self.atrasos += 1
+                log.warning("el hilo %s se retrasó %.0f ms (%d veces)", nombre, -espera * 1000, self.atrasos)
                 siguiente = self._reloj()
 
     # ------------------------------------------------------------------ pasos del lazo

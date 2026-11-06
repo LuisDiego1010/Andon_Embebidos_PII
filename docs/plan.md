@@ -106,17 +106,18 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 **Criterio de salida:** la simulación y la placa pasan las mismas pruebas de la interfaz.
 
 ### F3 · andon-sensores (lazo de seguridad)
-- [ ] `common/mqtt.py`: envoltorio de paho (1.x y 2.x), JSON, retenidos, reconexión
-- [ ] `sensores/rms.py`: RMS de la componente dinámica, ventana deslizante de 1 s evaluada cada 100 ms (a confirmar, ver D13)
-- [ ] `sensores/seguridad.py`: umbrales, paro retenido, falla de sensor → paro (D13)
-- [ ] Lazo de 100 Hz con reloj monotónico, DS18B20 en hilo aparte, publicación de `lecturas`
-- [ ] Recepción de `cmd/maquina`, `cmd/senal`, `cmd/recargar`, `sim/inyectar` (solo modo sim)
-- [ ] Publicación de `seguridad` y `salidas` (D12)
-- [ ] `__main__.py`, inyector de fallas (`tools/`) y servicio `sensores` en `compose.yaml`
-- [ ] Paro medido < 1 s en simulación (prueba en tiempo real)
-- [ ] Sección de `docs/pruebas.md`: CU-01 y CU-02 (simulación)
+- [x] `common/mqtt.py`: envoltorio de paho (1.x y 2.x), JSON, retenidos, reconexión
+- [x] `sensores/rms.py`: RMS de la componente dinámica, ventana deslizante de 1 s evaluada cada 100 ms
+- [x] `sensores/seguridad.py`: umbrales, paro retenido, falla de sensor → paro (D13), paro guardado en disco
+- [x] Lazo de 100 Hz con reloj monotónico, DS18B20 en hilo aparte, publicación de `lecturas`
+- [x] Recepción de `cmd/maquina`, `cmd/senal`, `cmd/recargar`, `sim/inyectar` (solo modo sim)
+- [x] Publicación de `seguridad` y `salidas` (D12)
+- [x] `__main__.py`, inyector de fallas (`tools/inyector.py`) y servicio `sensores` en `compose.yaml`
+- [x] Paro medido < 1 s en simulación (≈ 200 ms desde la inyección; prueba en tiempo real)
+- [x] Sección de `docs/pruebas.md`: CU-01 y CU-02 (simulación)
+- [ ] 3b: servicio en la RPi 4 en modo sim, con y sin Ollama calculando (procedimiento en `docs/pruebas.md`)
 
-**Criterio de salida:** CU-02 en simulación (Docker). La verificación en hardware pasa al Bloque hardware.
+**Criterio de salida:** CU-02 en simulación (Docker) ✅. La verificación en hardware pasa al Bloque hardware; 3b pendiente.
 
 ### F4 · andon-core
 - [ ] `tools/fake_ollama.py` (adelantado de F6: pruebas deterministas del core)

@@ -1,0 +1,59 @@
+# Evidencia F3 · andon-sensores en simulación (Docker, Mosquitto real) · 2026-11-06 16:25 UTC
+# Comandos: docker compose -f docker/compose.yaml --profile sim up -d sensores; app/tools/inyector.py; mosquitto_sub
+
+## CU-01 · operación normal (lecturas durante 4 s)
+andon/e1/lecturas {"ts": 1793982313.531, "vib_rms_g": 0.103, "temp_c": 30.125}
+andon/e1/lecturas {"ts": 1793982314.531, "vib_rms_g": 0.102, "temp_c": 30.312}
+andon/e1/lecturas {"ts": 1793982315.531, "vib_rms_g": 0.1, "temp_c": 30.438}
+andon/e1/lecturas {"ts": 1793982316.531, "vib_rms_g": 0.102, "temp_c": 30.625}
+Timed out
+
+## Estado retenido
+seguridad: {"ts": 1793982288.53, "activo": false, "sensor": null, "valor": null, "umbral": null}
+salidas: {"ts": 1793982288.53, "maquina": true, "luz": "verde", "zumbador": false, "oled": ["OPERANDO"]}
+
+## CU-02 · paro por vibración (inyector --vib-g 2.0 --esperar-paro)
+falla inyectada: {'duracion_s': 3.0, 'vib_g': 2.0}
+PARO: 349 ms desde la inyección → vibracion valor=1.115904170175629 umbral=1.0
+MQTT desconectado; se reintenta
+seguridad: {"ts": 1793982318.024, "activo": true, "sensor": "vibracion", "valor": 1.115904170175629, "umbral": 1.0}
+salidas: {"ts": 1793982318.021, "maquina": false, "luz": "roja", "zumbador": true, "oled": ["PARO", "vibracion", "1.12>1.00"]}
+
+## Paro retenido: la falla terminó (3 s) pero la máquina sigue detenida
+{"ts": 1793982318.021, "maquina": false, "luz": "roja", "zumbador": true, "oled": ["PARO", "vibracion", "1.12>1.00"]}
+
+## Orden de reinicio con origen core (el modelo no puede arrancar la máquina)
+{"ts": 1793982318.024, "activo": true, "sensor": "vibracion", "valor": 1.115904170175629, "umbral": 1.0}
+
+## Orden de luz verde durante el paro (se ignora)
+{"ts": 1793982318.021, "maquina": false, "luz": "roja", "zumbador": true, "oled": ["PARO", "vibracion", "1.12>1.00"]}
+
+## CU-06 · reinicio con origen web (el PIN lo valida andon-web)
+reinicio solicitado (origen web)
+MQTT desconectado; se reintenta
+seguridad: {"ts": 1793982326.173, "activo": false, "sensor": null, "valor": null, "umbral": null}
+salidas: {"ts": 1793982326.173, "maquina": true, "luz": "verde", "zumbador": false, "oled": ["OPERANDO"]}
+
+## CU-02 · paro por temperatura (inyector --temp-c 90)
+falla inyectada: {'duracion_s': 3.0, 'temp_c': 90.0}
+PARO: 421 ms desde la inyección → temperatura valor=90.0 umbral=60.0
+MQTT desconectado; se reintenta
+
+## Log del servicio
+2026-11-06 16:24:48,531 INFO andon.sensores.servicio: andon-sensores en marcha (modo sim)
+2026-11-06 16:24:48,535 INFO andon.common.mqtt: MQTT conectado a mosquitto:1883
+2026-11-06 16:25:17,715 INFO andon.sensores.servicio: falla inyectada: vib=2.0 g, temp=None °C, 3.0 s
+2026-11-06 16:25:18,020 ERROR andon.sensores.seguridad: PARO vibracion: valor=1.116 umbral=1.000
+2026-11-06 16:25:18,024 ERROR andon.sensores.servicio: PARO por vibracion: 1.116 (umbral 1.000); máquina detenida en 0.73 ms
+2026-11-06 16:25:23,490 WARNING andon.sensores.servicio: orden de máquina ignorada: {'accion': 'reiniciar', 'origen': 'core'}
+2026-11-06 16:25:24,555 INFO andon.sensores.servicio: cmd/senal ignorado: paro retenido
+2026-11-06 16:25:26,173 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+2026-11-06 16:25:28,115 INFO andon.sensores.servicio: falla inyectada: vib=None g, temp=90.0 °C, 3.0 s
+2026-11-06 16:25:28,530 ERROR andon.sensores.seguridad: PARO temperatura: valor=90.000 umbral=60.000
+2026-11-06 16:25:28,534 ERROR andon.sensores.servicio: PARO por temperatura: 90.000 (umbral 60.000); máquina detenida en 0.55 ms
+
+## Reinicio del servicio con un paro activo: la máquina sigue detenida (el paro se guardó en disco)
+2026-11-06 16:25:44,716 ERROR andon.sensores.servicio: arranca con un paro retenido (temperatura): la máquina sigue detenida
+2026-11-06 16:25:44,718 INFO andon.sensores.servicio: andon-sensores en marcha (modo sim)
+salidas: {"ts": 1793982344.717, "maquina": false, "luz": "roja", "zumbador": true, "oled": ["PARO", "temperatura", "90.00>60.00"]}
+seguridad: {"ts": 1793982344.717, "activo": true, "sensor": "temperatura", "valor": 90.0, "umbral": 60.0}
