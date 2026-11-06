@@ -57,7 +57,7 @@ Reglas del servidor (mensajes de error 400 observados):
 | Cualquier fallo | Conexión, timeout, HTTP ≠ 200, JSON inválido o categoría desconocida → `ErrorOllama` → luz amarilla y revisión manual |
 | Timeout | **45 s** (`TIMEOUT_S` en `core/ollama.py`; el valor real vendrá de `andon.conf`). La mediana en la RPi 4 es 16,8 s y la carga en frío 38 s. Es una guarda contra bloqueos, no la meta de REQ-N05 |
 | Calentamiento | Al arrancar, `andon-core` llama a `ollama.calentar()` (consulta mínima, nunca lanza): el primer reporte del operario no paga la carga de ~38 s |
-| CPU de la placa | Modo `performance` fijo (lo configura la imagen): ≈ 10 % menos de latencia |
+| CPU de la placa | `performance` frente a `ondemand`: **sin diferencia medible** (17,0 s con ambos, 6 nov). Es inocuo dejarlo, pero no mejora la latencia |
 | Umbral de confianza (provisional) | **0,92**. Los datos de la RPi 4 lo respaldan (ver resultados) |
 | Descripciones de criterios | Largas (en `core/ollama.py`). Las cortas no redujeron la latencia de forma clara y separaron peor las probabilidades |
 
@@ -86,7 +86,23 @@ evidencia en `docs/evidencias/latencia-20261105-193340.csv`. CPU en `ondemand`.
 | Claros que irían a amarillo con 0,92 | 1/16 (id 16, 0,91) | 1/16 (id 16, 0,90) |
 | Ambiguos que irían a amarillo con 0,92 | 3/3 (0,86–0,89) | 3/3 (0,83–0,90) |
 
-Con la CPU fija en `performance` (1,5 GHz) la mediana baja a ≈ 15,2 s.
+Diego midió ≈ 15,2 s con la CPU fija en `performance` (1,5 GHz). **No se reprodujo** el 6 nov
+(ver abajo): bajo carga sostenida `ondemand` ya sube a 1,5 GHz.
+
+## Mediciones del 6 nov en la RPi 4 (imagen Yocto, app de la rama `app/f2-hal`)
+
+`probar_calentamiento.py`, por SSH, CPU a 1,5 GHz, 61 °C (sin estrangulamiento).
+
+| Prueba | Resultado |
+|---|---|
+| Calentamiento en frío (modelo descargado de memoria → cargar + 1 consulta) | **37,0 s** |
+| 3 consultas en caliente, `performance` | 16 876 · 17 288 · 16 860 ms (mediana 16,9 s) |
+| 3 consultas en caliente, `ondemand` | 16 992 · 16 866 · 17 413 ms (mediana 17,0 s) |
+| 3 consultas en caliente, `performance` (repetición) | 17 262 · 16 849 · 17 035 ms (mediana 17,0 s) |
+| RAM con el modelo cargado | ≈ 1,4 GiB en uso de 7,6 GiB |
+
+El calentamiento al arrancar mueve esos 37 s fuera del primer reporte del operario.
+La latencia en caliente (≈ 17 s) no depende del modo de la CPU.
 
 ## Diagnóstico de la latencia (REQ-N05)
 
@@ -120,7 +136,7 @@ raíz de la imagen (1,7 GB libres). No se prueba.
 **REQ-N05: no se cumple y se reporta** (≈ 15 s en la placa), como permite la propuesta
 («se medirá y reportará»). Mitigaciones adoptadas:
 1. Calentamiento al arrancar (elimina los 38 s del primer reporte).
-2. CPU en `performance`.
+2. CPU en `performance`: inocuo, pero sin mejora medible (ver abajo).
 3. Flujo asíncrono en F4/F5: la web responde al instante «Analizando…» (amarillo) y
    publica el resultado después. El paro de seguridad (REQ-F07, < 1 s) no depende del modelo.
 4. Pendiente: descripciones de largo medio (Diego), a medir con los 19 reportes.

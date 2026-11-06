@@ -88,9 +88,9 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 - [ ] 🔌 Raspberry Pi OS Lite 64 bits, I2C y 1-Wire habilitados, cableado
       (sustituido por la imagen Yocto de Diego: I2C y 1-Wire ya habilitados; falta cablear)
 - [ ] 🔌 Pruebas rápidas: `i2cdetect` (0x68, 0x3C), DS18B20 en `/sys/bus/w1`, `gpioset` en MOSFET y LEDs
-      (`probar_hal.py` listo; pendiente de ejecutar en la placa y de tener el hardware)
+      (`probar_hal.py` ejecutado en la placa el 6 nov: GPIO e I2C abren, sensores ausentes; falta el hardware)
 - [ ] 🔌 Ollama arm64 + `tev1:0.8b` en la placa: latencia de 20 solicitudes (REQ-N05)
-      (medida por Diego el 5 nov: mediana 16,8 s; ver D4. Falta repetir con `performance` y calentamiento)
+      (Diego 5 nov: mediana 16,8 s; 6 nov: calentamiento 37 s y 16,9 s en caliente, sin diferencia entre `performance` y `ondemand`; ver D4)
 - [x] `hal/rpi.py` (MPU-6050, DS18B20, MOSFET, LEDs, zumbador) — escrito y probado con dobles; validación 🔌 pendiente
 - [ ] 🔌 Controlador SSD1306 → **cierra D5** (después de F3, tercero en el orden de recortes)
 - [ ] 🔌 Registrar valores normales y en falla para calibrar

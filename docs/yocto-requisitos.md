@@ -106,7 +106,8 @@ Gracias por las respuestas y por la imagen: quedan cerradas las 6 preguntas de l
 | Timeout hacia Ollama | 45 s (D4). `andon-core` hace una consulta de calentamiento al arrancar |
 
 ## Pedidos a la imagen
-1. **CPU en modo `performance` desde el arranque** (≈ 10 % menos de latencia, medido por Diego).
+1. ~~CPU en modo `performance`~~ — **ya no se pide**: se midió `ondemand` frente a `performance` en la
+   placa (6 nov) y la latencia es la misma (17,0 s). Queda como está.
 2. Revisar los 6 avisos de la compilación.
 3. Confirmar el mapa de pines al cablear (propuesta en `docs/hardware.md`; vive en
    `andon.conf`, cambiarlo no toca código): MOSFET GPIO17, LEDs 22/27/23, zumbador 24.

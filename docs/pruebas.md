@@ -38,7 +38,7 @@ scp -r app/src/andon app/config/andon.conf app/tools/probar_hal.py app/tools/pro
 En la placa (como root):
 
 ```bash
-# Governor performance (reduce ~10 % la latencia; la imagen lo fijará)
+# Governor performance (opcional: no cambió la latencia medida el 6 nov)
 for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $f; done
 
 # 1. Lectura de sensores y apertura de GPIO/I2C (sin mover salidas)
@@ -62,6 +62,6 @@ Las comprobaciones manuales con herramientas del sistema (independientes de la a
 | 2026-11-06 | PC x86 (Docker) | `pytest app/tests/unit` | 97 pruebas en verde |
 | 2026-11-06 | aarch64 (Docker emulado) | `pytest app/tests/unit` | 97 pruebas en verde |
 | 2026-11-06 | PC x86 (Docker) | `probar_calentamiento.py --descargar` | calentamiento en frío 6,0 s; consulta caliente 3,5 s |
-| | RPi 4 | `probar_hal.py` | pendiente |
+| 2026-11-06 | RPi 4 (Yocto) | `probar_hal.py` | 3 OK · 0 fallos · 2 avisos: GPIO (libgpiod v2) e I2C abren; MPU-6050 y DS18B20 sin conectar |
 | | RPi 4 con hardware | `probar_hal.py --salidas` | 🔌 pendiente: sensores y actuadores sin conseguir |
-| | RPi 4 | `probar_calentamiento.py --descargar` | pendiente |
+| 2026-11-06 | RPi 4 (Yocto) | `probar_calentamiento.py --descargar` | calentamiento en frío 37,0 s; consulta caliente 16,9 s (`performance` y `ondemand` iguales, ≈ 17,0 s) |
