@@ -84,14 +84,18 @@ lectura y entrega los comandos de instalación; el usuario los ejecuta.
 solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entregados a Diego.
 
 ### F2 · Capa de hardware
-- [ ] `hal/base.py` (interfaz) y `hal/sim.py` (muestras a 100 Hz, inyección de fallas)
+- [x] `hal/base.py` (interfaz) y `hal/sim.py` (muestras a 100 Hz, inyección de fallas)
 - [ ] 🔌 Raspberry Pi OS Lite 64 bits, I2C y 1-Wire habilitados, cableado
+      (sustituido por la imagen Yocto de Diego: I2C y 1-Wire ya habilitados; falta cablear)
 - [ ] 🔌 Pruebas rápidas: `i2cdetect` (0x68, 0x3C), DS18B20 en `/sys/bus/w1`, `gpioset` en MOSFET y LEDs
+      (`probar_hal.py` ejecutado en la placa el 6 nov: GPIO e I2C abren, sensores ausentes; falta el hardware)
 - [ ] 🔌 Ollama arm64 + `tev1:0.8b` en la placa: latencia de 20 solicitudes (REQ-N05)
-- [ ] 🔌 `hal/rpi.py` (MPU-6050, DS18B20, MOSFET, LEDs, zumbador)
-- [ ] 🔌 Controlador SSD1306 → **cierra D5**
+      (Diego 5 nov: mediana 16,8 s; 6 nov: calentamiento 37 s y 16,9 s en caliente, sin diferencia entre `performance` y `ondemand`; ver D4)
+- [x] `hal/rpi.py` (MPU-6050, DS18B20, MOSFET, LEDs, zumbador) — escrito y probado con dobles; validación 🔌 pendiente
+- [ ] 🔌 Controlador SSD1306 → **cierra D5** (después de F3, tercero en el orden de recortes)
 - [ ] 🔌 Registrar valores normales y en falla para calibrar
-- [ ] Sección de `docs/pruebas.md`: verificación de periféricos
+- [x] Sección de `docs/pruebas.md`: verificación de periféricos (procedimiento; resultados 🔌 pendientes)
+- [x] `common/config.py` + `app/config/andon.conf`, `common/topicos.py`, `docs/hardware.md` (mapa de pines)
 
 **Criterio de salida:** la simulación y la placa pasan las mismas pruebas de la interfaz.
 

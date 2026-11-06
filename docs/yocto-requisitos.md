@@ -106,7 +106,8 @@ Gracias por las respuestas y por la imagen: quedan cerradas las 6 preguntas de l
 | Timeout hacia Ollama | 45 s (D4). `andon-core` hace una consulta de calentamiento al arrancar |
 
 ## Pedidos a la imagen
-1. **CPU en modo `performance` desde el arranque** (≈ 10 % menos de latencia, medido por Diego).
+1. ~~CPU en modo `performance`~~ — **ya no se pide**: se midió `ondemand` frente a `performance` en la
+   placa (6 nov) y la latencia es la misma (17,0 s). Queda como está.
 2. Revisar los 6 avisos de la compilación.
 3. Confirmar el mapa de pines al cablear (propuesta en `docs/hardware.md`; vive en
    `andon.conf`, cambiarlo no toca código): MOSFET GPIO17, LEDs 22/27/23, zumbador 24.
@@ -121,3 +122,50 @@ Gracias por las respuestas y por la imagen: quedan cerradas las 6 preguntas de l
 
 Mientras tanto las unidades siguen desactivadas. Las unidades systemd: la decisión de
 dónde viven (receta o `app/deploy/systemd/`) queda pendiente de acordar contigo.
+
+---
+
+# Hallazgos de las pruebas en la placa (2026-11-06) · pendientes de decisión
+
+Ninguno de estos puntos se ha aplicado. Se documentan para decidirlos más adelante.
+
+## H1 · `systemd-networkd-wait-online` falla sin DHCP y retrasa Mosquitto
+
+**Qué se observó.** Con la placa conectada por cable directo a la laptop (sin servidor
+DHCP), `systemctl --failed` muestra `systemd-networkd-wait-online.service` en `failed`.
+
+**Causa.** `eth0` se configura por DHCP (`/usr/lib/systemd/network/80-wired.network`).
+Sin servidor, solo obtiene la dirección IPv6 de enlace local (`networkctl`: `degraded /
+configuring`). El servicio espera una dirección válida y vence su plazo (por defecto,
+2 minutos).
+
+**Efecto.**
+- `mosquitto.service` declara `After=network-online.target` y `Wants=network-online.target`.
+  Se comprobó que Mosquitto arrancó en el mismo segundo en que venció la espera. Sin DHCP,
+  Mosquitto, y con él `andon-sensores`, `andon-core` y `andon-web` (todos van después de
+  Mosquitto), arrancan unos 2 minutos tarde. REQ-N06 se cumple, con retraso.
+- Aplica a cualquier arranque sin red con DHCP: cable directo, punto de acceso propio sin
+  DHCP externo (F6) o laboratorio sin red.
+- `scripts/verificar-imagen.sh` marcaría `[FALLO] 1 servicio fallido` en ese montaje (en la
+  red del laboratorio, con DHCP, da 0).
+
+**Opciones** (de más a menos recomendada; la app solo necesita el loopback):
+1. *Drop-in* para Mosquitto que quite la dependencia de `network-online.target`
+   (`/etc/systemd/system/mosquitto.service.d/`). Puede instalarlo el `make install` de F6
+   desde `app/deploy/` o la receta de la imagen.
+2. Reducir la espera de `wait-online` (~10 s) o aceptar cualquier interfaz (`--any`).
+3. IP fija en `eth0` para el cable directo.
+
+**Decisión:** pendiente (usuario). Responsable de aplicarla: Diego (imagen) o F6 (instalador).
+
+## H2 · La hora de la placa es incorrecta sin Internet
+
+La placa no tiene reloj propio ni sincronización: el 6 nov mostraba 5 nov 20:20 UTC. Los
+eventos no deben fiarse de la hora del sistema; confirma D9 (hora del navegador enviada
+por el formulario).
+
+## H3 · Acceso a la placa por cable directo
+
+Sin DHCP, la placa se alcanza por su dirección IPv6 de enlace local, por ejemplo
+`ssh root@fe80::<dirección>%enp1s0f0` (se descubre con `ping -6 -I <interfaz> ff02::1` y la
+MAC con prefijo Raspberry Pi). `raspberrypi4-64.local` no resuelve en ese montaje.
