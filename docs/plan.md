@@ -15,6 +15,8 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 - **Miércoles 11, mediodía:** fecha límite para que la imagen Yocto arranque la app
   en la RPi 4 (ver Contingencia).
 - **Demo:** semana del 9 de noviembre, fecha pendiente de confirmar con el profesor.
+- **Hardware (sensores, torre, zumbador, ventilador):** sin fecha de llegada (6 nov). El
+  desarrollo continúa en simulación (D11); las tareas 🔌 pasan al «Bloque hardware».
 - Plataforma asumida: Yocto Scarthgap, Python 3.12 (pendiente de confirmación de Diego).
 
 ## Decisiones
@@ -31,6 +33,9 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D8 | Acceso supervisor/admin | PIN en la configuración | F5 |
 | D9 | Hora sin Internet | Hora del navegador enviada por el formulario | F5 |
 | D10 | Tablero | MQTT + página `/tablero` | F5 |
+| D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo; modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
+| D12 | Tópico `salidas` | Estado real de las salidas (retenido, sensores → web), en sim y en la placa (`decisiones/D12-topico-salidas.md`) | Cerrada |
+| D13 | Falla de sensor | 2 s sin lectura válida → paro retenido, `sensor: "*_fallo"` (`decisiones/D13-falla-de-sensor.md`) | Cerrada |
 
 ## Niveles de prueba
 
@@ -38,7 +43,8 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 |---|---|---|---|---|
 | 1 | Docker `dev` (x86) | Sim | Real (contenedor) | Lógica, contrato, exactitud |
 | 2 | Docker `--platform linux/arm64` | Sim | Falso | Compatibilidad aarch64 |
-| 3 | QEMU (Debian arm64; luego `qemuarm64` Yocto) | Sim | Falso | systemd, instalador, flujo completo |
+| 3 | QEMU (Debian arm64); respaldo sin placa, fines de semana | Sim | Falso | systemd, instalador, flujo completo |
+| 3b | RPi 4 con la imagen Yocto, `ANDON_MODO=sim` (drop-in de prueba) | Sim | Real | systemd, REQ-N06, latencia real, contención de CPU (paro < 1 s con Ollama calculando) |
 | 4 | RPi 4 real | Reales | Real | Latencia, umbrales, periféricos, demo |
 
 ## Entregables de la app
@@ -100,29 +106,36 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 **Criterio de salida:** la simulación y la placa pasan las mismas pruebas de la interfaz.
 
 ### F3 · andon-sensores (lazo de seguridad)
-- [ ] Lazo de 100 Hz, RMS por segundo, DS18B20 en hilo aparte
-- [ ] Umbrales, paro retenido, recepción de `cmd/maquina` y `cmd/senal`
-- [ ] Publicación de `lecturas` y `seguridad`
-- [ ] 🔌 CU-02 en hardware: aspa desbalanceada, paro medido < 1 s (REQ-N04)
-- [ ] Sección de `docs/pruebas.md`: CU-01 y CU-02
+- [ ] `common/mqtt.py`: envoltorio de paho (1.x y 2.x), JSON, retenidos, reconexión
+- [ ] `sensores/rms.py`: RMS de la componente dinámica, ventana deslizante de 1 s evaluada cada 100 ms (a confirmar, ver D13)
+- [ ] `sensores/seguridad.py`: umbrales, paro retenido, falla de sensor → paro (D13)
+- [ ] Lazo de 100 Hz con reloj monotónico, DS18B20 en hilo aparte, publicación de `lecturas`
+- [ ] Recepción de `cmd/maquina`, `cmd/senal`, `cmd/recargar`, `sim/inyectar` (solo modo sim)
+- [ ] Publicación de `seguridad` y `salidas` (D12)
+- [ ] `__main__.py`, inyector de fallas (`tools/`) y servicio `sensores` en `compose.yaml`
+- [ ] Paro medido < 1 s en simulación (prueba en tiempo real)
+- [ ] Sección de `docs/pruebas.md`: CU-01 y CU-02 (simulación)
 
-**Criterio de salida:** CU-02 en simulación y en hardware.
+**Criterio de salida:** CU-02 en simulación (Docker). La verificación en hardware pasa al Bloque hardware.
 
 ### F4 · andon-core
+- [ ] `tools/fake_ollama.py` (adelantado de F6: pruebas deterministas del core)
 - [ ] Máquina de estados con pruebas por transición
-- [ ] Cliente de Ollama (urllib) con timeout; error → amarillo
+- [ ] Cliente de Ollama (urllib) con timeout; error → amarillo; calentamiento al arrancar (D4)
+- [ ] `__main__.py` de `andon.core`
 - [ ] Umbral de confianza y Tabla 9
 - [ ] Registro SQLite; publicación de `evento` y `estado`
 - [ ] Configuración y recarga → **cierra D7**
 - [ ] Nivel 2 (arm64) en verde
 - [ ] Sección de `docs/pruebas.md`: CU-03, CU-04, CU-05
 
-**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real.
+**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama`.
 
 ### F5 · andon-web
 - [ ] Formulario (≤ 280 caracteres), resultado en pantalla, hora del navegador → **cierra D9**
 - [ ] PIN; CU-06 y CU-07 → **cierra D8**
 - [ ] `/tablero` con torre virtual → **cierra D10**
+- [ ] `__main__.py` de `andon.web`
 - [ ] Sección de `docs/pruebas.md`: CU-06, CU-07
 
 **Criterio de salida:** CU-01 a CU-07 se ejecutan desde el navegador en simulación.
@@ -130,14 +143,24 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 ### F6 · Empaquetado y QEMU
 - [ ] Instalador (`make install DESTDIR=...`)
 - [ ] Unidades systemd; configuración de Mosquitto, hostapd y dnsmasq
-- [ ] `tools/fake_ollama.py` y `config/andon-qemu.conf`
+- [ ] `config/andon-qemu.conf`
+- [ ] 3b: la RPi 4 con la imagen de Diego en modo sim (drop-in de prueba); medir el paro < 1 s con Ollama calculando
 - [ ] QEMU con Debian arm64: los servicios arrancan solos (REQ-N06); CU-01 a CU-07 en sim
 - [ ] Pruebas `oeqa` para el `testimage` de Diego
 - [ ] `docs/yocto-requisitos.md` **v2**: rutas, instalador, unidades, pruebas
 - [ ] `docs/pruebas.md` **cerrada**: requisitos previos, procedimiento por nivel y por CU, tabla de resultados
 - [ ] Etiqueta `v0.9-sim` en `app/dev`; entrega a Diego
 
-**Criterio de salida:** nivel 3 en verde y guía de pruebas lista para usar en la placa.
+**Criterio de salida:** niveles 3 y 3b en verde (3b si hay placa) y guía de pruebas lista para usar en la placa, con la tabla simulación/hardware.
+
+### Bloque hardware (sin fecha: depende de la llegada del material)
+Lo que solo se cierra con sensores y actuadores reales (D11). Se hacen en este orden.
+- [ ] 🔌 Cableado y comprobación con herramientas del sistema (`i2cdetect`, `/sys/bus/w1`, `gpioset`)
+- [ ] 🔌 `probar_hal.py` y `--salidas` con todo conectado; estado seguro del MOSFET (matar el proceso → ventilador detenido)
+- [ ] 🔌 Registrar valores normales y en falla; calibrar umbrales (`tools/calibrar.py`)
+- [ ] 🔌 CU-02 en hardware: aspa desbalanceada, paro medido < 1 s (REQ-N04)
+- [ ] 🔌 Confirmar con Diego el mapa de pines (`docs/hardware.md`)
+- [ ] 🔌 Controlador SSD1306 → cierra D5 (opcional)
 
 ### F7 · Pruebas (lunes 9 a jueves 12)
 Se ejecuta siguiendo `docs/pruebas.md`. Sin desarrollo nuevo: solo correcciones,

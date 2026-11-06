@@ -169,3 +169,25 @@ por el formulario).
 Sin DHCP, la placa se alcanza por su dirección IPv6 de enlace local, por ejemplo
 `ssh root@fe80::<dirección>%enp1s0f0` (se descubre con `ping -6 -I <interfaz> ff02::1` y la
 MAC con prefijo Raspberry Pi). `raspberrypi4-64.local` no resuelve en ese montaje.
+
+---
+
+# Notas v1.2 (2026-11-06) · decisiones D11–D13 que afectan a la imagen
+
+Detalle en `docs/decisiones/`.
+
+1. **D11 · Pruebas en la placa en modo sim.** Mientras no haya hardware, la app se prueba
+   completa en la RPi 4 con `ANDON_MODO=sim` y el Ollama real. Se activa solo con un
+   *drop-in* de prueba en `/etc/systemd/system/andon-sensores.service.d/`; **la receta
+   nunca fija el modo sim** (el valor por defecto es `rpi`). Pido activar las unidades en
+   la placa para esas pruebas en cuanto existan los tres `__main__.py`
+   (`andon-sensores` llega con F3).
+2. **D12 · Nuevo tópico `andon/e1/salidas`** (retenido): sin impacto en la imagen, el
+   broker lo acepta con la configuración actual.
+3. **D13 · Falla de sensor = paro retenido.** Con la placa sin sensores conectados,
+   `andon-sensores` en modo `rpi` detendrá la máquina y publicará `seguridad` con
+   `mpu6050_fallo` o `ds18b20_fallo`. Es el comportamiento esperado: mientras no estén los
+   sensores, las pruebas de la imagen usan el modo sim.
+4. **Contención de CPU:** durante una consulta, Ollama usa los 4 núcleos ~17 s. Se medirá
+   si retrasa el paro de `andon-sensores`; si es así pediré en las unidades `Nice` negativo y
+   afinidad de núcleo (`CPUAffinity=`), o limitar los hilos de Ollama (`OLLAMA_NUM_THREAD`).

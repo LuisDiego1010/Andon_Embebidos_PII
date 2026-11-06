@@ -14,8 +14,9 @@ EVENTO = PREFIJO + "evento"            # core -> público
 ESTADO = PREFIJO + "estado"            # core -> web (retenido)
 CMD_RECARGAR = PREFIJO + "cmd/recargar"  # web -> *
 SIM_INYECTAR = PREFIJO + "sim/inyectar"  # pruebas -> sensores (solo modo sim)
+SALIDAS = PREFIJO + "salidas"          # sensores -> web (retenido)  ts, maquina, luz, zumbador, oled (D12)
 
-RETENIDOS = frozenset({SEGURIDAD, ESTADO})
+RETENIDOS = frozenset({SEGURIDAD, ESTADO, SALIDAS})
 
 LUCES = ("verde", "amarilla", "roja")
 ACCIONES_MAQUINA = ("parar", "reiniciar")
