@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}Reporte{% endblock %}
+{% block contenido %}
+<section>
+  <h1>Reportar lo que pasa en la máquina</h1>
+  <form id="form">
+    <label for="texto">Descripción</label>
+    <textarea id="texto" rows="4" maxlength="{{ max_texto }}" required></textarea>
+    <div class="tenue"><span id="cuenta">0</span> / {{ max_texto }} caracteres</div>
+    <button id="enviar">Enviar reporte</button>
+  </form>
+  <div id="resultado" class="aviso" hidden></div>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+const ESPERA_MS = 120000;
+const texto = $("texto"), boton = $("enviar"), res = $("resultado");
+texto.addEventListener("input", () => $("cuenta").textContent = texto.value.length);
+
+function mostrar(clase, ...lineas) {
+  res.hidden = false; res.className = "aviso " + clase; res.replaceChildren();
+  for (const l of lineas) { const d = document.createElement("div"); d.textContent = l; res.append(d); }
+}
+function colorDe(e) {
+  if (e.accion === "parar_maquina" || e.accion === "paro_activo" || e.accion === "maquina_detenida") return "roja";
+  return e.accion === "ninguna" ? "verde" : "amarilla";
+}
+function mostrarEvento(e) {
+  const lineas = [];
+  if (e.categoria) lineas.push(`${CATEGORIAS[e.categoria] || e.categoria} (confianza ${(e.prob * 100).toFixed(1)} %)`);
+  if (e.error) lineas.push("El modelo no pudo responder.");
+  lineas.push(ACCIONES[e.accion] || e.accion);
+  if (e.area) lineas.push("Área responsable: " + (AREAS[e.area] || e.area));
+  lineas.push(`Tiempo de análisis: ${(e.latencia_ms / 1000).toFixed(1)} s`);
+  mostrar(colorDe(e), ...lineas);
+}
+async function esperar(id) {
+  const limite = Date.now() + ESPERA_MS;
+  while (Date.now() < limite) {
+    await new Promise(r => setTimeout(r, 1000));
+    try { mostrarEvento(await api("/api/evento/" + id)); return; }
+    catch (e) { if (e.codigo !== 404) { /* se reintenta: fallo pasajero de red */ } }
+  }
+  mostrar("amarilla", "No llegó respuesta a tiempo. Avise a su supervisor.");
+}
+$("form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  boton.disabled = true;
+  mostrar("amarilla", "Analizando… puede tardar unos 20 s.");
+  try {
+    const r = await api("/api/reporte", {texto: texto.value, ts_navegador: Date.now() / 1000});
+    await esperar(r.id);
+    texto.value = ""; $("cuenta").textContent = "0";
+  } catch (e) { mostrar("roja", e.message); }
+  boton.disabled = false;
+});
+</script>
+{% endblock %}

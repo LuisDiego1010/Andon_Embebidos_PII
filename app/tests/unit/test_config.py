@@ -77,10 +77,11 @@ def test_topicos_con_prefijo():
     assert topicos.LECTURAS == "andon/e1/lecturas"
     assert topicos.CMD_MAQUINA == "andon/e1/cmd/maquina"
     assert topicos.SIM_INYECTAR == "andon/e1/sim/inyectar"
+    assert topicos.SIM_AJUSTAR == "andon/e1/sim/ajustar"
     assert topicos.SALIDAS == "andon/e1/salidas"
     assert topicos.RETENIDOS == {topicos.SEGURIDAD, topicos.ESTADO, topicos.SALIDAS}
     todos = [v for k, v in vars(topicos).items() if isinstance(v, str) and v.startswith(topicos.PREFIJO) and k != "PREFIJO"]
-    assert len(todos) == len(set(todos)) == 10
+    assert len(todos) == len(set(todos)) == 11
 
 
 def test_sensores_y_ruta_del_paro(tmp_path):

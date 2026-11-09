@@ -353,3 +353,33 @@ def test_la_perdida_de_mqtt_no_impide_el_paro(e):
     e.inyectar(vib_g=2.0, duracion_s=5)
     e.hasta_paro()
     assert e.salidas().maquina is False and e.salidas().luz == "roja"
+
+
+def test_panel_ajusta_la_vibracion_y_dispara_el_paro(e):
+    e.avanzar(1)
+    e.broker.publicar(topicos.SIM_AJUSTAR, {"vib_g": 2.0})
+    e.avanzar(2)
+    assert e.svc.seguridad.causa.sensor == "vibracion"
+
+
+def test_panel_sensor_desconectado_dispara_d13(e):
+    e.avanzar(1)
+    e.broker.publicar(topicos.SIM_AJUSTAR, {"ds18b20_ok": False})
+    e.avanzar(4)
+    assert e.svc.seguridad.causa.sensor == "ds18b20_fallo"
+
+
+def test_panel_con_valor_invalido_se_ignora(e):
+    e.avanzar(1)
+    e.broker.publicar(topicos.SIM_AJUSTAR, {"vib_g": 99})
+    e.avanzar(2)
+    assert not e.svc.seguridad.activo
+
+
+def test_panel_se_ignora_fuera_del_modo_sim(tmp_path):
+    e = Entorno(tmp_path, modo="rpi")
+    e.avanzar(2)
+    e.broker.publicar(topicos.SIM_AJUSTAR, {"vib_g": 2.0})
+    e.svc._on_ajustar(topicos.SIM_AJUSTAR, {"vib_g": 2.0})     # ni siquiera a mano
+    e.avanzar(3)
+    assert not e.svc.seguridad.activo

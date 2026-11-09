@@ -110,3 +110,50 @@ def test_crear_hal_rpi_sin_gpiod(monkeypatch):
     monkeypatch.setitem(__import__("sys").modules, "gpiod", None)  # fuerza ImportError
     with pytest.raises(ErrorHardware):
         crear_hal(Config(modo="rpi"))
+
+
+def test_ajustar_vibracion_persiste_y_requiere_maquina_en_marcha():
+    from andon.sensores.rms import rms_dinamico
+    t = [0.0]
+    h = HalSim(reloj=lambda: t[0], maquina_inicial=True, ruido_g=0.0)
+    h.ajustar(vib_g=2.0)
+
+    def rms():
+        m = []
+        for i in range(100):
+            t[0] += 0.01
+            m.append(h.leer_acel())
+        return rms_dinamico(m)
+    assert abs(rms() - 2.0) < 0.05
+    assert abs(rms() - 2.0) < 0.05
+    h.set_maquina(False)
+    assert rms() < 0.01
+
+
+def test_ajustar_temperatura_manual_y_automatica():
+    h = HalSim(reloj=lambda: 0.0)
+    h.ajustar(temp_c=80.0)
+    assert h.leer_temp() == 80.0
+    h.ajustar(temp_c=None)
+    assert h.leer_temp() == 25.0
+
+
+def test_sensor_desconectado_lanza_error_de_hardware():
+    from andon.hal.base import ErrorHardware
+    h = HalSim()
+    h.ajustar(mpu_ok=False)
+    with pytest.raises(ErrorHardware):
+        h.leer_acel()
+    h.leer_temp()
+    h.ajustar(mpu_ok=True, ds18b20_ok=False)
+    h.leer_acel()
+    with pytest.raises(ErrorHardware):
+        h.leer_temp()
+
+
+@pytest.mark.parametrize("campos", [{"vib_g": 4}, {"ruido_g": -1}, {"temp_c": "x"}, {"mpu_ok": "no"}, {"z": 1}])
+def test_ajuste_invalido_no_cambia_nada(campos):
+    h = HalSim()
+    with pytest.raises(ValueError):
+        h.ajustar(**campos)
+    assert h.vib_rms_g == 0.10

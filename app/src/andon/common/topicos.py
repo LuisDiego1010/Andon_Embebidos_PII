@@ -14,6 +14,7 @@ EVENTO = PREFIJO + "evento"            # core -> público   id, ts, lecturas, te
 ESTADO = PREFIJO + "estado"            # core -> web (retenido)
 CMD_RECARGAR = PREFIJO + "cmd/recargar"  # web -> *
 SIM_INYECTAR = PREFIJO + "sim/inyectar"  # pruebas -> sensores (solo modo sim)
+SIM_AJUSTAR = PREFIJO + "sim/ajustar"    # panel -> sensores (solo modo sim, retenido; D15)
 SALIDAS = PREFIJO + "salidas"          # sensores -> web (retenido)  ts, maquina, luz, zumbador, oled (D12)
 
 RETENIDOS = frozenset({SEGURIDAD, ESTADO, SALIDAS})

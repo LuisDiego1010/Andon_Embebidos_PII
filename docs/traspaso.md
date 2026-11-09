@@ -18,7 +18,7 @@ de seguridad), `andon-core` (decisión, Ollama, SQLite) y `andon-web` (formulari
 | F2 capa de hardware | ✅ en sim y con dobles | `hal/base`, `hal/sim`, `hal/rpi` (sin sensores reales) |
 | F3 `andon-sensores` | ✅ | Lazo de 100 Hz, paro retenido, falla de sensor; 3b en la RPi 4 ✅ |
 | F4 `andon-core` | ✅ en Docker | Estados, Tabla 9, SQLite, recarga; **pendiente de probar en la placa** |
-| F5 `andon-web` | ⏳ siguiente | Formulario, PIN, `/tablero` (D8, D9, D10) |
+| F5 `andon-web` | ✅ en contenedor | Formulario, PIN, `/tablero`, umbrales; **pendiente de probar en la placa** (`tools/probar_sin_hardware.py`) |
 | F6 empaquetado y QEMU | ⏳ | `make install`, unidades, QEMU, `oeqa`, `yocto-requisitos` v2, `v0.9-sim` |
 | Bloque hardware | ⏳ sin fecha | Cableado, calibración, OLED (D5), CU con sensores reales |
 
@@ -62,11 +62,12 @@ primero y se anota aquí, en `topicos.py` y en una decisión (ver D12, D14).
 | `cmd/maquina` | core, web → sensores | accion: parar \| reiniciar, origen. `reiniciar` solo se acepta con origen `web` |
 | `cmd/senal` | core → sensores | luz: verde \| amarilla \| roja, zumbador, oled (lista de líneas) |
 | `reporte` | web → core | id, texto (≤ 280), ts_navegador |
-| `evento` | core → público | id, ts, lecturas, texto, categoria, prob, accion, area, latencia_ms, error (D14) |
+| `evento` | core → público | id, ts, lecturas, texto, categoria, prob, accion, area, latencia_ms, error (D14); probs, umbral, entrada (D16) |
 | `estado` (retenido) | core → web | estado, ultimo_evento |
 | `cmd/recargar` | web → * | — |
 | `salidas` (retenido) | sensores → web | ts, maquina, luz, zumbador, oled (D12) |
 | `sim/inyectar` | pruebas → sensores | solo modo sim: vib_g, temp_c, duracion_s |
+| `sim/ajustar` (retenido) | web → sensores | solo modo sim: vib_g, ruido_g, temp_c (null = automática), mpu_ok, ds18b20_ok (D15) |
 
 `estado.estado` ∈ `calentando`, `reposo`, `analizando`, `atencion`, `detenida`, `paro_seguridad`.
 `evento.accion` ∈ `ninguna`, `parar_maquina`, `avisar`, `revision_manual`, `paro_activo`,

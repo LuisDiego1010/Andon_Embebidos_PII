@@ -37,7 +37,7 @@ PROB_AMBIGUA = 0.60
 
 def clasificar(estado):
     """(categoria, probabilidad) para un `state` de texto."""
-    t = estado.lower()
+    t = re.sub(r"vibración [\d.]+ g rms", "", estado.lower())   # las lecturas no son el reporte
     m = re.search(r"#prob=([01](?:\.\d+)?)", t)
     forzada = float(m.group(1)) if m else None
     cat = None

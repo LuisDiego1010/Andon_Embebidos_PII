@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titulo %}Tablero{% endblock %}
+{% block contenido %}
+<style>
+  .planta { display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+  .torre { display:flex; flex-direction:column; gap:6px; padding:10px; background:var(--fondo); border-radius:8px; }
+  .luz { width:64px; height:44px; border-radius:6px; opacity:.15; }
+  .luz.on { opacity:1; }
+  #l-roja { background:var(--roja); } #l-amarilla { background:var(--amarilla); } #l-verde { background:var(--verde); }
+  .datos { flex:1; min-width:220px; }
+  #oled { font-family:monospace; padding:10px; margin-top:12px; background:#000; color:#7fd4ff; border-radius:4px; min-height:3em; white-space:pre-line; }
+</style>
+<section>
+  <h1>Estado de la estación</h1>
+  <div id="alerta" class="aviso roja" hidden></div>
+  <div class="planta">
+    <div class="torre" aria-label="Torre Andon"><div id="l-roja" class="luz"></div><div id="l-amarilla" class="luz"></div><div id="l-verde" class="luz"></div></div>
+    <div class="datos">
+      <div class="fila"><span>Estado</span><b id="estado">—</b></div>
+      <div class="fila"><span>Máquina</span><b id="maquina">—</b></div>
+      <div class="fila"><span>Zumbador</span><b id="zumbador">—</b></div>
+      <div class="fila"><span>Vibración RMS</span><b id="vib">—</b></div>
+      <div class="fila"><span>Temperatura</span><b id="temp">—</b></div>
+    </div>
+  </div>
+  <div id="oled"></div>
+</section>
+<section>
+  <h2>Últimos eventos</h2>
+  <div id="eventos" class="tenue">Sin eventos desde que arrancó la web.</div>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+const ESTADOS = {calentando:"Cargando el modelo", reposo:"Operación normal", analizando:"Analizando reporte…", atencion:"Requiere atención",
+  detenida:"Detenida por falla", paro_seguridad:"PARO DE SEGURIDAD"};
+const f = (v, u, d) => typeof v === "number" ? `${v.toFixed(d)} ${u}` : "sin dato";
+async function refrescar() {
+  let s;
+  try { s = await api("/api/estado"); }
+  catch { $("alerta").hidden = false; $("alerta").textContent = "Sin comunicación con la estación."; return; }
+  const paro = s.seguridad && s.seguridad.activo;
+  $("alerta").hidden = s.conectado && !paro;
+  $("alerta").textContent = !s.conectado ? "La web perdió la conexión con el bus MQTT."
+    : paro ? `Paro de seguridad: ${s.seguridad.sensor} = ${s.seguridad.valor}. Queda retenido hasta que un supervisor lo libere con PIN.` : "";
+  const sal = s.salidas || {};
+  for (const c of ["roja", "amarilla", "verde"]) $("l-" + c).classList.toggle("on", sal.luz === c);
+  $("estado").textContent = s.estado ? (ESTADOS[s.estado.estado] || s.estado.estado) : "sin dato";
+  $("maquina").textContent = sal.maquina === undefined ? "sin dato" : sal.maquina ? "En marcha" : "Detenida";
+  $("zumbador").textContent = sal.zumbador === undefined ? "sin dato" : sal.zumbador ? "Sonando" : "Apagado";
+  const frescas = s.lecturas && s.lecturas_edad_s !== null && s.lecturas_edad_s < 5;
+  $("vib").textContent = frescas ? f(s.lecturas.vib_rms_g, "g", 3) : "sin dato";
+  $("temp").textContent = frescas ? f(s.lecturas.temp_c, "°C", 1) : "sin dato";
+  $("oled").textContent = (sal.oled || []).join("\n");
+  if (s.eventos.length) {
+    $("eventos").replaceChildren(...s.eventos.map(e => {
+      const d = document.createElement("div"); d.className = "fila";
+      const t = document.createElement("span"); t.textContent = e.texto;
+      const b = document.createElement("b");
+      b.textContent = (CATEGORIAS[e.categoria] || "Sin clasificar") + " · " + (ACCIONES[e.accion] || e.accion);
+      d.append(t, b); return d;
+    }));
+  }
+}
+refrescar(); setInterval(refrescar, 1000);
+</script>
+{% endblock %}
