@@ -1,0 +1,17 @@
+# /defensa · Ejecutar todos, en la RPi 4 con el modelo real tev1:0.8b (9 nov 2026)
+# Navegador automatizado (Chromium) por túnel SSH. Captura: f7-defensa-placa-20261109.png
+
+duración total: 94 s
+10 de 10 casos cumplen lo esperado
+  ✅ CU-01 · Operación normal → Obtenido: verde y en marcha · 0.10 g, 33.5 °C
+  ✅ CU-02 · Paro por vibración → Obtenido: paro en 697 ms (medido desde el navegador) · retenido al normalizar la vibración
+  ✅ CU-02 · Paro por temperatura → Obtenido: paro por temperatura: 85.0 °C sobre 60 °C
+  ✅ Sensor desconectado (D13) → Obtenido: paro «mpu6050_fallo» a los 2.1 s
+  ✅ CU-03 · Falla que los sensores no ven → Obtenido: Falla eléctrica (98.7 %) → Máquina detenida, 17.7 s · aviso a Mantenimiento
+  ✅ CU-04 · Reporte de calidad → Obtenido: Problema de calidad (99.9 %) → Aviso enviado, 17.3 s
+  ✅ CU-05 · Reporte ambiguo → Obtenido: Falla mecánica (69.3 %) → Revisión manual, 16.5 s · umbral 92.0 %
+  ✅ CU-06 · Reinicio con PIN → Obtenido: PIN incorrecto rechazado (403) · con el PIN correcto vuelve a verde
+  ✅ CU-07 · Cambio de umbral sin reiniciar → Obtenido: umbral 0,05 g aplicado en 0.6 s · restaurado a 1 g
+  ✅ Seguridad independiente del modelo → Obtenido: paro en 340 ms mientras el modelo analizaba · después el modelo respondió «Paro de seguridad activo: no se actuó» sin arrancar la máquina
+barras de probabilidad: 5
+ERRORES JS: []
