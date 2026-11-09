@@ -30,21 +30,21 @@ Leyenda: ✅ probado · 🟡 parcial · ⏳ pendiente · ❌ no cumple · — no
 |---|---|---|---|
 | REQ-F01 vibración ≥ 100 Hz, RMS cada 1 s | ✅ | ⏳ | Lazo medido a 100,0 Hz sin atrasos (PC); RMS de ventana de 1 s cada 100 ms |
 | REQ-F02 temperatura ≥ 1 Hz | ✅ | ⏳ | Hilo aparte a 1 Hz; el DS18B20 real tarda ~750 ms por lectura |
-| REQ-F03 formulario web (≤ 280) | ⏳ F5 | — | |
+| REQ-F03 formulario web (≤ 280) | ✅ F5 | — | Formulario, tablero, supervisor y simulador; probado en navegador (Chromium) en la PC y en la RPi 4 (9 nov) |
 | REQ-F04 estado → `/v1/systemone` | ✅ | ✅ | Cliente probado en Docker y en la RPi 4 (D4) |
 | REQ-F05 cinco categorías | ✅ | ✅ | 16/16 reportes claros; conjunto pequeño y fácil |
-| REQ-F06 área responsable | ✅ F4 | — | Tabla 9: mantenimiento, calidad o supervisión en cada `evento` (CU-03/04/05, modelo real) |
+| REQ-F06 área responsable | ✅ F4 | — | Tabla 9: mantenimiento, calidad o supervisión en cada `evento` (CU-03/04/05, modelo real en Docker y en la RPi 4) |
 | REQ-F07 paro por umbral sin modelo | ✅ | ⏳ | Decidido en `andon-sensores` sin MQTT ni modelo. Umbrales provisionales hasta calibrar |
 | REQ-F08 amarillo si baja confianza | ✅ F4 | ⏳ | Probabilidad < 0,92, timeout, error HTTP o JSON inválido → amarilla y revisión manual, sin parar la máquina (pruebas unitarias y CU-05 con el modelo real) |
-| REQ-F09 torre, zumbador, OLED | 🟡 F2–F3 | ⏳ | Salidas probadas con dobles y GPIO abierto en la placa; sin torre conectada. OLED pendiente (D5) |
-| REQ-F10 registro de eventos | ✅ F4 | ⏳ | SQLite (`db_ruta`): fecha, lecturas, texto, categoría, probabilidad, acción, área, latencia y error. Falta verificar la escritura en `/var/lib/andon` de la placa |
-| REQ-F11 publicación MQTT | ✅ F3–F4 | ⏳ | `lecturas`, `seguridad`, `salidas`, `evento` y `estado` publicados con Mosquitto real |
+| REQ-F09 torre, zumbador, OLED | ✅ | 🟡 | Torre, zumbador y OLED virtuales en la web. En la placa, los 5 GPIO quedan como salidas de `andon-sensores` y GPIO17 en bajo durante el paro (9 nov). OLED: controlador escrito y probado con dobles, sin pantalla real (D5) |
+| REQ-F10 registro de eventos | ✅ F4 | ✅ | SQLite (`db_ruta`): fecha, lecturas, texto, categoría, probabilidad, acción, área, latencia y error. En la placa se escribe en `/var/lib/andon/andon.db` (9 nov) |
+| REQ-F11 publicación MQTT | ✅ F3–F5 | ✅ | `lecturas`, `seguridad`, `salidas`, `evento` y `estado` con Mosquitto real, en Docker y en la placa |
 | REQ-N01 sin Internet | 🟡 | 🟡 | Modelo y servicios locales (Diego); se cierra en F7 |
-| REQ-N02 RPi + Yocto | — | 🟡 | La imagen arranca en la RPi 4; falta la app activa |
+| REQ-N02 RPi + Yocto | — | ✅ | La imagen arranca la app completa en la RPi 4 (9 nov) |
 | REQ-N03 Ollama y modelo preinstalados | — | ✅ | `ollama list` en la imagen, sin descargas (Diego, 5 nov; verificado 6 nov) |
-| REQ-N04 paro < 1 s | ✅ | ⏳ | Sim en PC: ≈ 200 ms desde la inyección y 0,7–1,1 ms desde la muestra que cruza el umbral. 3b en la RPi 4 con Ollama calculando: 272–363 ms desde la inyección, 0 retrasos del lazo. Faltan sensores reales |
+| REQ-N04 paro < 1 s | ✅ | 🟡 | Sim en PC: ≈ 200 ms desde la inyección y 0,7–1,1 ms desde la muestra que cruza el umbral. En la RPi 4 en modo sim con Ollama calculando: 272–375 ms (6 y 9 nov), 340 ms visto desde el navegador. Faltan sensores reales |
 | REQ-N05 clasificación ≤ 3 s | — | ❌ | ≈ 17 s en la RPi 4; no se cumple y se reporta (D4) |
-| REQ-N06 arranque automático (systemd) | ⏳ F6 | ⏳ | Unidades en la imagen, desactivadas hasta tener `__main__.py` |
+| REQ-N06 arranque automático (systemd) | — | ✅ | Los tres servicios habilitados en la imagen; arriba a los 8,6 s del arranque, sin DHCP (H1 resuelto). Falta probar un corte de corriente con la app en marcha |
 | REQ-N07 ningún GPIO > 3,3 V | — | ⏳ | Reglas en `docs/hardware.md`; se verifica al cablear |
 
 ## CU-01 y CU-02 en simulación (F3)
@@ -112,6 +112,29 @@ usa la frase de la tabla (0,987). En la RPi 4 la latencia será ≈ 17 s por rep
 durante el análisis la luz queda amarilla («Analizando…») y la web no se bloquea.
 
 **Pendiente de probar en la placa:** repetir en la RPi 4 con la imagen (nivel 3b, `andon-core` + `andon-sensores` en modo sim, drop-in de la sección «Nivel 3b», Ollama de la imagen). Se espera ≈ 17 s por reporte, la luz amarilla «Analizando…» durante la consulta, el paro por umbral < 1 s mientras Ollama calcula y `andon.db` creado en `/var/lib/andon`. Procedimiento: copiar la app como en «Nivel 3b», `systemctl start andon-sensores andon-core` (con el drop-in sim en `andon-sensores`) y enviar los reportes con `python3 /opt/andon/enviar_reporte.py --host 127.0.0.1 "..."` (copiar `app/tools/enviar_reporte.py`).
+
+## App completa en la RPi 4 con la imagen Yocto (9 nov)
+
+Todo lo que no necesita sensores, con el modelo real. En la placa, como root:
+
+```bash
+python3 /opt/andon/probar_sin_hardware.py        # ≈ 6 min; deja la placa como estaba
+sh /opt/andon/modo.sh sim                         # panel: http://<placa>:5000/simulador y /defensa
+sh /opt/andon/modo.sh real
+```
+
+| Prueba | Resultado (9 nov) |
+|---|---|
+| Arranque sin DHCP (H1) | ✅ Mosquitto y los servicios arriba a los 8,6 s; 0 servicios fallidos |
+| `verificar-imagen.sh` | ✅ 34 OK · 0 fallos · 3 avisos (sensores y OLED ausentes) |
+| Modo real sin sensores | ✅ paro `mpu6050_fallo` (D13); 5 GPIO tomados por `andon-sensores`, GPIO17 en bajo |
+| CU-01 a CU-07 con el modelo real | ✅ CU-03 98,6 % → máquina detenida; CU-04 99,9 %; CU-05 68 % → revisión manual; ≈ 17 s por reporte |
+| Paro con el modelo calculando | ✅ 340–375 ms |
+| Ollama detenido | ✅ revisión manual; el paro sigue funcionando |
+| `probar_sin_hardware.py` | 69 OK · 1 fallo: el lazo se retrasaba 1 s cada 10–25 s **solo en modo real sin MPU-6050** (el bus vacío cuelga ~1 de cada 1000 intentos de iniciarlo). Corregido: reintento cada 0,5 s; 0 retrasos en 3 min |
+| `/defensa`, Ejecutar todos | ✅ 10 de 10 en 94 s |
+
+Evidencias: `docs/evidencias/f7-placa-sin-hardware-20261109.txt`, `f7-defensa-placa-20261109.txt` y `.png`.
 
 ## Nivel 3b · la RPi 4 con la imagen Yocto, `ANDON_MODO=sim`
 

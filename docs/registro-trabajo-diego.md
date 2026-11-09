@@ -3,7 +3,7 @@
 **Proyecto:** II Proyecto EdgeAI · Estación Andon Inteligente de Borde · EL5841 Taller de Sistemas Embebidos, ITCR
 **Autor:** Luis Diego García Rojas · roles: líder técnico (arquitecto de sistemas) e investigador
 **Equipo:** Eduardo Tencio (director de proyecto · auditor de calidad)
-**Periodo:** 23 de octubre – 5 de noviembre de 2026
+**Periodo:** 23 de octubre – 9 de noviembre de 2026
 
 Este documento reúne lo trabajado en la propuesta, la imagen Yocto, la integración con la
 app y las primeras pruebas en la placa. Sirve de base para las bitácoras por rol
@@ -20,11 +20,12 @@ app y las primeras pruebas en la placa. Sirve de base para las bitácoras por ro
 | Capa `meta-andon` + configuración kas | ✅ Lista |
 | Imagen Yocto compilada | ✅ 7410 tareas, 895 MB |
 | Imagen arrancando en la placa | ✅ `verificar-imagen.sh`: 34 OK · 0 fallos · 3 avisos |
-| Integración con la app (receta `andon-app`) | ✅ Instalada en la imagen; servicios desactivados hasta tener los módulos |
+| Integración con la app (receta `andon-app`) | ✅ Tres servicios habilitados al arrancar; Mosquitto sin esperar la red (H1) |
+| App completa en la placa, modelo real | ✅ `probar_sin_hardware.py` 69/70 (fallo corregido) · `/defensa` 10 de 10 (9 nov) |
 | Latencia del modelo en la placa | ⚠️ ~15–17 s por clasificación (meta de la propuesta: ≤ 3 s) |
 | Exactitud del modelo en la placa | ✅ 16/16 reportes claros |
-| Aplicación (sensores, núcleo, web) | ⏳ En desarrollo (Eduardo) |
-| Hardware (sensores y actuadores) | ⏳ Por conseguir |
+| Aplicación (sensores, núcleo, web) | ✅ F0–F5 (Eduardo F0–F4; F5, simulador y defensa el 9 nov) |
+| Hardware (sensores y actuadores) | ⏳ Opcional: la defensa se hará con sensores simulados (decisión del 9 nov) |
 
 ---
 
@@ -183,6 +184,34 @@ KAS_CONTAINER_ENGINE=podman kas-container build andon.yml 2>&1 | tee compilacion
 
 ---
 
+### 9 nov · App completa en la placa, simulador y defensa
+
+**Actividades**
+- Compilación de la imagen desde el repositorio (ya no desde `../andon-yocto`), reutilizando sus
+  descargas y su caché: ≈ 500 tareas en vez de 7400.
+- Receta `andon-app`: los tres servicios habilitados, `/etc/andon` del usuario `andon` (la web guarda
+  los umbrales) y herramientas de prueba en `/opt/andon`.
+- **H1 resuelto.** La espera de Mosquitto la introduce `2895.patch` de meta-openembedded; un drop-in
+  no sirve porque systemd no permite quitar dependencias desde uno (`man systemd.unit`). Se quitó el
+  parche con `mosquitto_%.bbappend`.
+- F5 `andon-web` (formulario, tablero, supervisor con PIN), panel `/simulador` (D15), página
+  `/defensa` con 10 casos ejecutables y evento con las probabilidades del modelo (D16).
+- Controlador de la OLED SSD1306 y cerrojo del bus I2C compartido con el MPU-6050.
+- Pruebas en la RPi 4 (cable directo, sin DHCP) y evidencias en `docs/evidencias/f7-*`.
+
+**Decisiones**
+- La defensa se hará sin sensores físicos: el simulador alimenta el mismo código de producción.
+  Pendiente de confirmar con el profesor.
+
+**Problemas y soluciones**
+
+| Problema | Causa | Solución |
+| --- | --- | --- |
+| La conexión SSH con la placa se cortaba cada ~5 min | NetworkManager reintentaba DHCP en el cable y quitaba la dirección de la interfaz | `nmcli device set <interfaz> managed no` mientras se trabaja con la placa |
+| El lazo de seguridad se retrasaba 1 s cada 10–25 s, solo sin MPU-6050 | Se intentaba iniciar el sensor 100 veces por segundo; en un bus I2C vacío ~1 de cada 1000 intentos espera el timeout del kernel (1 s) | Reintento cada 0,5 s; 0 retrasos en 3 min |
+| `apt` no descargaba dentro de los contenedores | La red del TEC no deja pasar el puerto 80 desde ellos | `apt` por HTTPS |
+| `localhost:5000` no respondía | `localhost` resolvía primero a IPv6 y la web escucha en IPv4 | Usar `127.0.0.1` |
+
 ## 3. Resultados en la placa
 
 ### 3.1 `verificar-imagen.sh` (E1, E2, E3)
@@ -258,14 +287,18 @@ que el modelo clasifique con seguridad, o revisar el umbral.
 
 - [x] Prueba de descripciones de una palabra: más rápida (11,2 s) pero se equivoca.
 - [ ] Probar descripciones de largo medio (una frase con las pistas clave) con los 19 reportes.
-- [ ] Pasar resultados y cambios a Eduardo (timeout, umbral, frase de CU-03).
-- [ ] Revisar los 6 avisos de la compilación.
+- [x] Pasar resultados y cambios a Eduardo (timeout, umbral, frase de CU-03): `docs/traspaso.md`.
+- [x] Revisar los avisos de la compilación: las del 9 nov dan 1 solo, «Host distribution debian-13 has not
+      been validated» (el contenedor de kas); no afecta a la imagen.
 - [ ] Conseguir y cablear el hardware (LEDs, zumbador, ventilador + transistor, DS18B20,
       MPU-6050, OLED).
-- [ ] Recibir de la app: `__main__.py` de cada servicio, `make install`, configuración de
-      Mosquitto, hostapd y dnsmasq.
-- [ ] Activar los servicios en la receta (`SYSTEMD_AUTO_ENABLE = "enable"`) y recompilar.
-- [ ] Pruebas CU-01 a CU-07 sobre la imagen Yocto.
+- [x] Recibir de la app: `__main__.py` de cada servicio (9 nov). `make install` y la configuración
+      de hostapd y dnsmasq siguen pendientes.
+- [x] Activar los servicios en la receta (`SYSTEMD_AUTO_ENABLE = "enable"`) y recompilar.
+- [x] Pruebas CU-01 a CU-07 sobre la imagen Yocto (en modo sim, con el modelo real).
+- [ ] Red para la defensa: punto de acceso propio o hotspot.
+- [ ] Probar un corte de corriente con la app en marcha (REQ-N06).
+- [ ] Quitar `debug-tweaks` y cambiar el PIN antes de la entrega.
 - [ ] Bitácoras por rol (líder técnico e investigador) y repositorio público final.
 
 ---
