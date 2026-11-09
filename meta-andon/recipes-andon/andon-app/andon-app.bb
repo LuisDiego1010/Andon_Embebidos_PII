@@ -27,9 +27,7 @@ USERADD_PARAM:${PN} = "--system --gid andon --groups i2c,gpio \
                        --shell /sbin/nologin andon"
 
 SYSTEMD_SERVICE:${PN} = "andon-sensores.service andon-core.service andon-web.service"
-# Desactivados mientras los módulos no tengan su punto de entrada (__main__.py).
-# Cuando estén listos: cambiar a "enable" y recompilar.
-SYSTEMD_AUTO_ENABLE = "disable"
+SYSTEMD_AUTO_ENABLE = "enable"
 
 do_configure[noexec] = "1"
 do_compile[noexec] = "1"
@@ -50,6 +48,12 @@ do_install() {
         done
     fi
 
+    # Herramientas de prueba y calibración en la placa
+    for t in probar_sin_hardware probar_hal inyector enviar_reporte calibrar; do
+        install -m 0755 ${S}/tools/$t.py ${D}/opt/andon/
+    done
+    install -m 0755 ${S}/tools/modo.sh ${D}/opt/andon/
+
     # Nunca empaquetar bytecode generado en la PC de desarrollo
     find ${D} -name __pycache__ -type d -prune -exec rm -rf {} +
     find ${D} -name '*.pyc' -delete
@@ -61,6 +65,12 @@ do_install() {
 
     install -d -m 0750 ${D}/var/lib/andon
     chown -R andon:andon ${D}/var/lib/andon
+
+    # andon-web guarda los umbrales aquí (CU-07) con reemplazo atómico: necesita el directorio.
+    # El archivo trae el PIN (D8): solo lo lee el usuario andon.
+    chown -R andon:andon ${D}${sysconfdir}/andon
+    chmod 0750 ${D}${sysconfdir}/andon
+    chmod 0640 ${D}${sysconfdir}/andon/andon.conf
 }
 
 FILES:${PN} += " \

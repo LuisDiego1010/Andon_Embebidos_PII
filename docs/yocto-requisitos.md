@@ -150,9 +150,9 @@ configuring`). El servicio espera una dirección válida y vence su plazo (por d
   red del laboratorio, con DHCP, da 0).
 
 **Opciones** (de más a menos recomendada; la app solo necesita el loopback):
-1. *Drop-in* para Mosquitto que quite la dependencia de `network-online.target`
-   (`/etc/systemd/system/mosquitto.service.d/`). Puede instalarlo el `make install` de F6
-   desde `app/deploy/` o la receta de la imagen.
+1. ~~*Drop-in* para Mosquitto~~: **no funciona**, systemd no permite quitar dependencias desde un
+   drop-in (`man systemd.unit`). Se aplicó quitar `2895.patch`, que es el parche de meta-openembedded que
+   introduce la espera (`meta-andon/recipes-connectivity/mosquitto/mosquitto_%.bbappend`).
 2. Reducir la espera de `wait-online` (~10 s) o aceptar cualquier interfaz (`--any`).
 3. IP fija en `eth0` para el cable directo.
 
