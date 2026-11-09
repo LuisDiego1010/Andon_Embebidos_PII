@@ -67,6 +67,8 @@ class FakeSMBus:
         self.who_am_i = who_am_i
         self.muestra = muestra  # cuentas crudas (ax, ay, az)
         self.escrituras = []
+        self.bloques = []
+        self.falla_oled = False
         self.cerrado = False
         self.falla = False
 
@@ -80,6 +82,12 @@ class FakeSMBus:
         if self.falla:
             raise OSError(121, "Remote I/O error")
         self.escrituras.append((addr, reg, valor))
+
+    def write_i2c_block_data(self, addr, reg, datos):
+        if self.falla or self.falla_oled:
+            raise OSError(121, "Remote I/O error")
+        assert len(datos) <= 32
+        self.bloques.append((addr, reg, list(datos)))
 
     def read_i2c_block_data(self, addr, reg, n):
         if self.falla:
