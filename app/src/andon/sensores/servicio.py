@@ -66,6 +66,7 @@ class Sensores:
         self.mqtt.suscribir(topicos.CMD_RECARGAR, self._on_recargar)
         if self.cfg.modo == "sim":      # sim/inyectar no existe fuera del modo sim (D11)
             self.mqtt.suscribir(topicos.SIM_INYECTAR, self._on_inyectar)
+            self.mqtt.suscribir(topicos.SIM_AJUSTAR, self._on_ajustar)
         self.mqtt.al_conectar(self._republicar)
         self.hal.suscribir(self._on_salida)
         self.mqtt.conectar()
@@ -287,6 +288,16 @@ class Sensores:
             return
         self.hal.inyectar(vib_g=vib, temp_c=temp, duracion_s=dur)
         log.info("falla inyectada: vib=%s g, temp=%s °C, %s s", vib, temp, dur)
+
+    def _on_ajustar(self, topico, d):
+        """Controles del panel /simulador (D15). Solo existe en modo sim."""
+        if self.cfg.modo != "sim" or not hasattr(self.hal, "ajustar"):
+            log.warning("sim/ajustar ignorado: no es modo sim")
+            return
+        try:
+            self.hal.ajustar(**d)
+        except (TypeError, ValueError) as e:
+            log.warning("sim/ajustar inválido: %s", e)
 
     # ------------------------------------------------------------------ publicación
     def _ts(self):

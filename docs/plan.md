@@ -1,11 +1,15 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-06 (F4 cerrada en Docker; guía de continuación en `docs/traspaso.md`)
+Última actualización: 2026-11-09 (F5 cerrada; app completa probada en la RPi 4 con la imagen Yocto; guía en `docs/traspaso.md`)
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
 
 ## Restricciones y fechas fijas
+- **9 nov: plazo extendido hasta el viernes 13.** Las fechas de abajo quedan como historia.
+- **9 nov: la defensa se hace sin sensores físicos** (decisión del equipo). El panel `/simulador`
+  reemplaza a los sensores con el mismo código de producción (D15). Falta confirmarlo con el
+  profesor; el bloque hardware pasa a opcional.
 - **Placa (préstamo):** solo disponible entre semana. Las tareas marcadas
   🔌 requieren la RPi 4 y deben agendarse en días hábiles.
 - **F0 a F6 terminadas antes del lunes 9.** Del lunes 9 al jueves 12 solo pruebas (F7).
@@ -27,16 +31,18 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D2 | Comunicación entre servicios | MQTT local | Cerrada |
 | D3 | `andon-web` | Proceso separado, comunica por MQTT (respaldo: Flask dentro de core) | Cerrada |
 | D4 | Contrato con /v1/systemone | Formato fijado; timeout 45 s (medido en la RPi 4); calentamiento al arrancar; umbral 0,92 provisional; REQ-N05 no se cumple y se reporta (ver `decisiones/D4-contrato-systemone.md`); error → amarillo | Cerrada (umbral a reconfirmar en F4/F7) |
-| D5 | OLED | Controlador propio sobre smbus2 (respaldo: sin OLED) | F2 |
+| D5 | OLED | Controlador propio sobre smbus2 (`hal/ssd1306.py`, en hilo aparte; una OLED ausente no afecta al paro) | Escrito y probado con dobles; falta pantalla real |
 | D6 | Simulación | Muestras crudas inyectables; Ollama real en Docker, falso en QEMU | Cerrada |
 | D7 | Configuración y recarga | Archivo + aviso `cmd/recargar` (`decisiones/D7-configuracion-y-recarga.md`) | Cerrada (F4) |
-| D8 | Acceso supervisor/admin | PIN en la configuración | F5 |
-| D9 | Hora sin Internet | Hora del navegador enviada por el formulario | F5 |
-| D10 | Tablero | MQTT + página `/tablero` | F5 |
+| D8 | Acceso supervisor/admin | PIN en la configuración, validado en la web; bloqueo de 30 s tras 5 fallos | Cerrada (F5) |
+| D9 | Hora sin Internet | Hora del navegador enviada por el formulario; `evento.ts` = esa hora + latencia | Cerrada (F5) |
+| D10 | Tablero | MQTT + página `/tablero` (la web guarda en memoria lo último publicado) | Cerrada (F5) |
 | D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo; modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
 | D12 | Tópico `salidas` | Estado real de las salidas (retenido, sensores → web), en sim y en la placa (`decisiones/D12-topico-salidas.md`) | Cerrada |
 | D13 | Falla de sensor | 2 s sin lectura válida → paro retenido, `sensor: "*_fallo"` (`decisiones/D13-falla-de-sensor.md`) | Cerrada |
 | D14 | `evento` con `id` y `error` | Cambio de contrato aprobado en F4 (`decisiones/D14-evento-con-id-y-error.md`) | Cerrada |
+| D15 | Panel del simulador | `/simulador` y tópico `sim/ajustar` (retenido), solo en modo sim (`decisiones/D15-panel-simulador.md`) | Cerrada |
+| D16 | `evento` con probabilidades | `probs`, `umbral` y `entrada` en cada evento (`decisiones/D16-evento-con-probabilidades.md`) | Cerrada |
 
 ## Niveles de prueba
 
@@ -130,24 +136,27 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 - [x] Configuración y recarga → **cierra D7**
 - [x] Nivel 2 (arm64) en verde
 - [x] Sección de `docs/pruebas.md`: CU-03, CU-04, CU-05
-- [ ] 3b: `andon-core` y `andon-sensores` en la RPi 4 en modo sim con el Ollama real — **pendiente de probar en la placa**
+- [x] 3b: `andon-core` y `andon-sensores` en la RPi 4 en modo sim con el Ollama real (9 nov; `docs/evidencias/f7-placa-sin-hardware-20261109.txt`)
 
-**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama` ✅ (6 nov). Falta la prueba en la placa (3b del core).
+**Criterio de salida:** CU-03, CU-04 y CU-05 en Docker con el modelo real y con `fake_ollama` ✅ (6 nov); en la placa ✅ (9 nov, ≈ 17 s por reporte).
 
 ### F5 · andon-web
-- [ ] Formulario (≤ 280 caracteres), resultado en pantalla, hora del navegador → **cierra D9**
-- [ ] PIN; CU-06 y CU-07 → **cierra D8**
-- [ ] `/tablero` con torre virtual → **cierra D10**
-- [ ] `__main__.py` de `andon.web`
-- [ ] Sección de `docs/pruebas.md`: CU-06, CU-07
+- [x] Formulario (≤ 280 caracteres), resultado en pantalla, hora del navegador → **cierra D9**
+- [x] PIN; CU-06 y CU-07 → **cierra D8**
+- [x] `/tablero` con torre virtual → **cierra D10**
+- [x] `__main__.py` de `andon.web`
+- [x] Sección de `docs/pruebas.md`: CU-06, CU-07
+- [x] Agregado: `/simulador` (D15) y `/defensa` con los casos ejecutables y las probabilidades (D16)
 
-**Criterio de salida:** CU-01 a CU-07 se ejecutan desde el navegador en simulación.
+**Criterio de salida:** CU-01 a CU-07 se ejecutan desde el navegador en simulación ✅ (9 nov: en la PC con
+Ollama falso y en la RPi 4 con el modelo real, `/defensa` 10 de 10).
 
 ### F6 · Empaquetado y QEMU
 - [ ] Instalador (`make install DESTDIR=...`)
-- [ ] Unidades systemd; configuración de Mosquitto, hostapd y dnsmasq
+- [x] Unidades systemd en la receta `andon-app`, habilitadas; Mosquitto sin `network-online` (H1)
+- [ ] Red para la demo: hostapd y dnsmasq (punto de acceso propio) o hotspot de celular
 - [ ] `config/andon-qemu.conf`
-- [ ] 3b: la RPi 4 con la imagen de Diego en modo sim (drop-in de prueba); medir el paro < 1 s con Ollama calculando
+- [x] 3b: la RPi 4 con la imagen de Diego en modo sim (`tools/modo.sh sim`); paro 340–375 ms con Ollama calculando
 - [ ] QEMU con Debian arm64: los servicios arrancan solos (REQ-N06); CU-01 a CU-07 en sim
 - [ ] Pruebas `oeqa` para el `testimage` de Diego
 - [ ] `docs/yocto-requisitos.md` **v2**: rutas, instalador, unidades, pruebas
@@ -160,10 +169,11 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 Lo que solo se cierra con sensores y actuadores reales (D11). Se hacen en este orden.
 - [ ] 🔌 Cableado y comprobación con herramientas del sistema (`i2cdetect`, `/sys/bus/w1`, `gpioset`)
 - [ ] 🔌 `probar_hal.py` y `--salidas` con todo conectado; estado seguro del MOSFET (matar el proceso → ventilador detenido)
-- [ ] 🔌 Registrar valores normales y en falla; calibrar umbrales (`tools/calibrar.py`)
+- [ ] 🔌 Registrar valores normales y en falla; calibrar umbrales (`tools/calibrar.py`, ya escrito)
 - [ ] 🔌 CU-02 en hardware: aspa desbalanceada, paro medido < 1 s (REQ-N04)
 - [ ] 🔌 Confirmar con Diego el mapa de pines (`docs/hardware.md`)
-- [ ] 🔌 Controlador SSD1306 → cierra D5 (opcional)
+- [ ] 🔌 Probar el controlador SSD1306 (`hal/ssd1306.py`, ya escrito) en una pantalla real → cierra D5 (opcional)
+Pasos y checklist eléctrica: `docs/guia-hardware.md`.
 
 ### F7 · Pruebas (lunes 9 a jueves 12)
 Se ejecuta siguiendo `docs/pruebas.md`. Sin desarrollo nuevo: solo correcciones,

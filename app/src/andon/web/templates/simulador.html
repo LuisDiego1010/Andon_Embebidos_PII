@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block titulo %}Simulador{% endblock %}
+{% block clase_main %}ancho{% endblock %}
+{% block contenido %}
+<style>
+  .sim { display:grid; grid-template-columns:minmax(300px, 380px) minmax(0, 1fr); gap:16px; align-items:start; }
+  @media (max-width:860px) { .sim { grid-template-columns:minmax(0, 1fr); } }
+  .sim section { margin-bottom:12px; }
+  .control { margin-bottom:12px; }
+  .control .tope { display:flex; justify-content:space-between; color:var(--tenue); font-size:.92rem; }
+  .control .tope b { color:var(--texto); font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; padding:0; accent-color:var(--acento); }
+  input[type=range]:disabled { opacity:.35; }
+  .interruptor { display:flex; align-items:center; gap:10px; margin:8px 0; color:var(--texto); }
+  .interruptor input { width:auto; }
+  .botones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .botones button { margin:0; padding:9px 8px; font-size:.9rem; background:#2d3640; color:var(--texto); border:1px solid var(--borde); }
+  .botones button:hover { border-color:var(--acento); }
+  .planta { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:space-around; }
+  .torre { display:flex; flex-direction:column; gap:5px; padding:8px; background:#0c0f12; border-radius:8px; }
+  .luz { width:58px; height:38px; border-radius:5px; opacity:.13; transition:opacity .1s; }
+  .luz.on { opacity:1; box-shadow:0 0 18px currentColor; }
+  #l-roja { background:var(--roja); color:var(--roja); } #l-amarilla { background:var(--amarilla); color:var(--amarilla); } #l-verde { background:var(--verde); color:var(--verde); }
+  .equipo { text-align:center; color:var(--tenue); font-size:.88rem; }
+  #aspa { width:112px; height:112px; display:block; margin:0 auto 4px; animation:giro .55s linear infinite; animation-play-state:paused; }
+  #aspa.on { animation-play-state:running; }
+  @keyframes giro { to { transform:rotate(360deg); } }
+  #bocina { font-size:2.6rem; line-height:112px; height:112px; opacity:.18; }
+  #bocina.on { opacity:1; animation:pulso .3s ease-in-out infinite alternate; }
+  @keyframes pulso { to { transform:scale(1.18); } }
+  #oled { width:200px; height:112px; padding:8px; background:#000; color:#7fd4ff; border-radius:4px; font:12px/13.5px monospace; white-space:pre; overflow:hidden; text-align:left; }
+  #banner { padding:12px 14px; margin-bottom:12px; border-radius:6px; font-weight:700; background:#253; }
+  #banner.paro { background:var(--roja); color:#fff; } #banner.aviso2 { background:var(--amarilla); color:#14181d; }
+  canvas { display:block; width:100%; height:140px; background:#0c0f12; border-radius:6px; }
+  .grafica + .grafica { margin-top:12px; }
+  #registro { max-height:230px; overflow-y:auto; font-size:.88rem; }
+  #registro .fila b { font-weight:600; text-align:right; }
+  .datos { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 20px; }
+</style>
+<div class="sim">
+  <div>
+    <section>
+      <h2>Sensores simulados</h2>
+      <div class="control"><div class="tope"><span>Vibración de la máquina</span><b id="v-vib"></b></div>
+        <input id="vib" type="range" min="0" max="3" step="0.01"></div>
+      <label class="interruptor"><input id="temp-manual" type="checkbox"> Temperatura manual (si no, modelo térmico)</label>
+      <div class="control"><div class="tope"><span>Temperatura</span><b id="v-temp"></b></div>
+        <input id="temp" type="range" min="20" max="100" step="0.5" disabled></div>
+      <div class="control"><div class="tope"><span>Ruido del sensor</span><b id="v-ruido"></b></div>
+        <input id="ruido" type="range" min="0" max="0.5" step="0.005"></div>
+      <label class="interruptor"><input id="mpu" type="checkbox"> MPU-6050 conectado</label>
+      <label class="interruptor"><input id="ds" type="checkbox"> DS18B20 conectado</label>
+      <div id="msg-sim" class="error tenue"></div>
+    </section>
+    <section>
+      <h2>Escenarios</h2>
+      <div class="botones">
+        <button data-ajuste='{"vib_g":2.0}'>Aspa desbalanceada</button>
+        <button data-ajuste='{"temp_c":85}'>Sobrecalentamiento</button>
+        <button data-ajuste='{"mpu_ok":false}'>Desconectar MPU-6050</button>
+        <button data-ajuste='{"ds18b20_ok":false}'>Desconectar DS18B20</button>
+        <button data-reporte="Huele a quemado y salió una chispa del cable de alimentación">CU-03 Falla eléctrica</button>
+        <button data-reporte="Las piezas salen rayadas y fuera de especificación">CU-04 Calidad</button>
+        <button data-reporte="Algo raro pasa, no sé qué es">CU-05 Ambiguo</button>
+        <button data-reporte="Se acabó el material en la línea, no hay tornillos">Falta material</button>
+      </div>
+    </section>
+    <section>
+      <h2>Reporte del operario</h2>
+      <textarea id="texto" rows="3" maxlength="{{ max_texto }}" placeholder="¿Qué está pasando?"></textarea>
+      <button id="enviar">Enviar reporte</button>
+    </section>
+    <section>
+      <h2>Supervisor</h2>
+      <label for="pin">PIN</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off">
+      <div class="botones" style="margin-top:12px">
+        <button id="reiniciar">Reiniciar máquina</button>
+        <button id="normal">Todo a normal y reiniciar</button>
+      </div>
+      <label for="u-vib">Umbral de vibración (g)</label><input id="u-vib" type="number" step="any" min="0" max="4">
+      <label for="u-temp">Umbral de temperatura (°C)</label><input id="u-temp" type="number" step="any" min="0" max="125">
+      <label for="u-conf">Confianza mínima del modelo</label><input id="u-conf" type="number" step="any" min="0" max="1">
+      <button id="guardar">Guardar umbrales</button>
+      <div id="msg-sup" class="tenue" style="margin-top:8px"></div>
+    </section>
+  </div>
+  <div>
+    <div id="banner">Conectando…</div>
+    <section>
+      <div class="planta">
+        <div class="torre" aria-label="Torre Andon"><div id="l-roja" class="luz"></div><div id="l-amarilla" class="luz"></div><div id="l-verde" class="luz"></div></div>
+        <div class="equipo">
+          <svg id="aspa" viewBox="-50 -50 100 100" aria-hidden="true"><circle r="47" fill="none" stroke="#36404a" stroke-width="3"/><g fill="#8fa3b5"><path id="p" d="M0 -6 C 14 -40, 34 -28, 8 -3Z"/><use href="#p" transform="rotate(90)"/><use href="#p" transform="rotate(180)"/><use href="#p" transform="rotate(270)"/></g><circle r="7" fill="#36404a"/></svg>
+          Ventilador: <b id="maquina">—</b>
+        </div>
+        <div class="equipo"><div id="bocina" aria-hidden="true">🔊</div>Zumbador: <b id="zumbador">—</b></div>
+        <div class="equipo"><div id="oled"></div>OLED</div>
+      </div>
+      <label class="interruptor" style="justify-content:center;margin-bottom:0"><input id="sonido" type="checkbox"> Sonido del zumbador</label>
+    </section>
+    <section>
+      <div class="grafica"><div class="fila" style="border:0"><span>Vibración RMS</span><b id="g-vib">—</b></div><canvas id="c-vib"></canvas></div>
+      <div class="grafica"><div class="fila" style="border:0"><span>Temperatura</span><b id="g-temp">—</b></div><canvas id="c-temp"></canvas></div>
+    </section>
+    <section>
+      <h2>Último diagnóstico</h2>
+      <div class="datos">
+        <div class="fila"><span>Estado</span><b id="estado">—</b></div>
+        <div class="fila"><span>Categoría</span><b id="d-cat">—</b></div>
+        <div class="fila"><span>Confianza</span><b id="d-prob">—</b></div>
+        <div class="fila"><span>Acción</span><b id="d-acc">—</b></div>
+        <div class="fila"><span>Área</span><b id="d-area">—</b></div>
+        <div class="fila"><span>Tiempo</span><b id="d-lat">—</b></div>
+      </div>
+    </section>
+    <section>
+      <div class="fila" style="border:0"><h2 style="margin:0">Registro</h2><button id="exportar" style="margin:0;padding:6px 12px">Exportar CSV</button></div>
+      <div id="registro" class="tenue">Sin eventos todavía.</div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const ESTADOS = {calentando:"Cargando el modelo…", reposo:"Operación normal", analizando:"Analizando reporte…", atencion:"Requiere atención",
+  detenida:"Máquina detenida por falla", paro_seguridad:"PARO DE SEGURIDAD"};
+const MOTIVOS = {vibracion:"vibración excesiva", temperatura:"temperatura excesiva", mpu6050_fallo:"MPU-6050 sin señal", ds18b20_fallo:"DS18B20 sin señal"};
+const NORMAL = {vib_g:0.1, ruido_g:0.01, temp_c:null, mpu_ok:true, ds18b20_ok:true};
+const PUNTOS = 150;
+const series = {vib:[], temp:[]};
+const registro = [], vistos = new Set();
+let ultimaLectura = null, paroPrevio = false, cargado = false, umbrales = null;
+
+// ---- controles
+function pintarControles(a) {
+  $("vib").value = a.vib_g; $("ruido").value = a.ruido_g;
+  $("temp-manual").checked = a.temp_c !== null; $("temp").disabled = a.temp_c === null;
+  if (a.temp_c !== null) $("temp").value = a.temp_c;
+  $("mpu").checked = a.mpu_ok; $("ds").checked = a.ds18b20_ok;
+  rotulos();
+}
+function rotulos() {
+  $("v-vib").textContent = (+$("vib").value).toFixed(2) + " g";
+  $("v-temp").textContent = $("temp-manual").checked ? (+$("temp").value).toFixed(1) + " °C" : "automática";
+  $("v-ruido").textContent = (+$("ruido").value).toFixed(3) + " g";
+}
+async function ajustar(campos, repintar) {
+  try {
+    await api("/api/sim/ajustar", campos); $("msg-sim").textContent = "";
+    if (repintar) pintarControles((await api("/api/estado")).sim);
+  } catch (e) { $("msg-sim").textContent = e.message; }
+}
+let temporizador = null, pendiente = {};
+function ajustarSuave(campos) {   // una perilla dispara muchos eventos: se agrupan
+  Object.assign(pendiente, campos); rotulos();
+  if (temporizador) return;
+  temporizador = setTimeout(() => { const c = pendiente; pendiente = {}; temporizador = null; ajustar(c); }, 120);
+}
+$("vib").addEventListener("input", e => ajustarSuave({vib_g:+e.target.value}));
+$("ruido").addEventListener("input", e => ajustarSuave({ruido_g:+e.target.value}));
+$("temp").addEventListener("input", e => ajustarSuave({temp_c:+e.target.value}));
+$("temp-manual").addEventListener("change", e => {
+  $("temp").disabled = !e.target.checked; rotulos();
+  ajustar({temp_c: e.target.checked ? +$("temp").value : null});
+});
+$("mpu").addEventListener("change", e => ajustar({mpu_ok:e.target.checked}));
+$("ds").addEventListener("change", e => ajustar({ds18b20_ok:e.target.checked}));
+document.querySelectorAll("[data-ajuste]").forEach(b => b.addEventListener("click", () => ajustar(JSON.parse(b.dataset.ajuste), true)));
+
+// ---- reportes y supervisor
+async function reportar(texto) {
+  if (!texto.trim()) return;
+  $("d-cat").textContent = "analizando…";
+  for (const id of ["d-prob", "d-acc", "d-area", "d-lat"]) $(id).textContent = "—";
+  try { await api("/api/reporte", {texto, ts_navegador: Date.now() / 1000}); $("msg-sim").textContent = ""; }
+  catch (e) { $("msg-sim").textContent = e.message; $("d-cat").textContent = "—"; }
+}
+document.querySelectorAll("[data-reporte]").forEach(b => b.addEventListener("click", () => reportar(b.dataset.reporte)));
+$("enviar").addEventListener("click", () => { reportar($("texto").value); $("texto").value = ""; });
+const msg = (t, malo) => { $("msg-sup").textContent = t; $("msg-sup").className = malo ? "error" : "tenue"; };
+async function reiniciar() { await api("/api/reiniciar", {pin:$("pin").value}); msg("Orden de reinicio enviada."); }
+$("reiniciar").addEventListener("click", () => reiniciar().catch(e => msg(e.message, true)));
+$("normal").addEventListener("click", async () => {
+  try {
+    await api("/api/sim/ajustar", NORMAL);
+    pintarControles(NORMAL);
+    await new Promise(r => setTimeout(r, 1300));   // que la ventana de RMS se vacíe de la falla
+    await reiniciar();
+  } catch (e) { msg(e.message, true); }
+});
+$("guardar").addEventListener("click", async () => {
+  try {
+    await api("/api/umbrales", {pin:$("pin").value, valores:{vib_rms_g:$("u-vib").value, temp_c:$("u-temp").value, umbral_confianza:$("u-conf").value}});
+    msg("Umbrales guardados y aplicados.");
+  } catch (e) { msg(e.message, true); }
+});
+
+// ---- zumbador
+let audio = null, oscilador = null;
+function sonar(activo) {
+  const quiere = activo && $("sonido").checked;
+  if (quiere && !oscilador) {
+    audio = audio || new AudioContext();
+    oscilador = audio.createOscillator(); const g = audio.createGain();
+    oscilador.frequency.value = 2400; g.gain.value = 0.04;
+    oscilador.connect(g).connect(audio.destination); oscilador.start();
+  } else if (!quiere && oscilador) { oscilador.stop(); oscilador = null; }
+}
+
+// ---- gráficas
+function dibujar(id, serie, umbral, maxBase, unidad) {
+  const c = $(id), r = c.getBoundingClientRect(), k = devicePixelRatio || 1;
+  if (c.width !== Math.round(r.width * k)) { c.width = Math.round(r.width * k); c.height = Math.round(r.height * k); }
+  const x = c.getContext("2d"); x.setTransform(k, 0, 0, k, 0, 0);
+  const w = r.width, h = r.height, tope = Math.max(maxBase, (umbral || 0) * 1.25, ...serie.map(p => p.v * 1.1));
+  const px = i => 34 + (w - 40) * i / (PUNTOS - 1), py = v => h - 8 - (h - 16) * v / tope;
+  x.clearRect(0, 0, w, h);
+  x.font = "11px system-ui"; x.fillStyle = "#a3afba"; x.strokeStyle = "#232b33"; x.lineWidth = 1;
+  for (let i = 0; i <= 2; i++) {
+    const v = tope * i / 2; x.beginPath(); x.moveTo(34, py(v)); x.lineTo(w - 6, py(v)); x.stroke();
+    x.fillText(v.toFixed(v < 10 ? 1 : 0), 4, py(v) + 4);
+  }
+  const ini = PUNTOS - serie.length;
+  x.strokeStyle = "#e5484d";
+  serie.forEach((p, i) => { if (p.paro) { x.beginPath(); x.moveTo(px(ini + i), 4); x.lineTo(px(ini + i), h - 4); x.stroke(); } });
+  if (umbral) { x.setLineDash([5, 4]); x.strokeStyle = "#f2b81f"; x.beginPath(); x.moveTo(34, py(umbral)); x.lineTo(w - 6, py(umbral)); x.stroke(); x.setLineDash([]); }
+  x.strokeStyle = "#4da3ff"; x.lineWidth = 2; x.beginPath();
+  serie.forEach((p, i) => i ? x.lineTo(px(ini + i), py(p.v)) : x.moveTo(px(ini + i), py(p.v))); x.stroke();
+}
+function agregar(s) {
+  const l = s.lecturas;
+  if (!l || l.ts === ultimaLectura) return;
+  ultimaLectura = l.ts;
+  const paro = !!(s.seguridad && s.seguridad.activo), marca = paro && !paroPrevio;
+  for (const [n, v] of [["vib", l.vib_rms_g], ["temp", l.temp_c]])
+    if (typeof v === "number") { series[n].push({v, paro:marca}); if (series[n].length > PUNTOS) series[n].shift(); }
+  paroPrevio = paro;
+}
+
+// ---- registro
+const hora = t => new Date(t).toLocaleTimeString("es-CR");
+function anotar(fila) {
+  registro.unshift(fila); if (registro.length > 500) registro.pop();
+  $("registro").replaceChildren(...registro.slice(0, 60).map(r => {
+    const d = document.createElement("div"); d.className = "fila";
+    const a = document.createElement("span"); a.textContent = `${r.hora} · ${r.texto}`;
+    const b = document.createElement("b"); b.textContent = r.resumen;
+    d.append(a, b); return d;
+  }));
+}
+function revisarEventos(s) {
+  [...s.eventos].reverse().forEach(e => {
+    if (vistos.has(e.id)) return;
+    vistos.add(e.id);
+    if (cargado) mostrarDiagnostico(e);
+    anotar({hora:hora(Date.now()), tipo:"reporte", texto:e.texto, categoria:e.categoria || "", prob:e.prob ?? "", accion:e.accion, area:e.area || "", latencia_ms:e.latencia_ms,
+            vib:e.lecturas?.vib_rms_g ?? "", temp:e.lecturas?.temp_c ?? "", resumen:(CATEGORIAS[e.categoria] || "Sin clasificar") + " · " + (ACCIONES[e.accion] || e.accion)});
+  });
+}
+function mostrarDiagnostico(e) {
+  $("d-cat").textContent = CATEGORIAS[e.categoria] || (e.error ? "Modelo sin respuesta" : "—");
+  $("d-prob").textContent = e.prob == null ? "—" : (e.prob * 100).toFixed(1) + " %";
+  $("d-acc").textContent = ACCIONES[e.accion] || e.accion;
+  $("d-area").textContent = AREAS[e.area] || e.area || "—";
+  $("d-lat").textContent = (e.latencia_ms / 1000).toFixed(1) + " s";
+}
+let paroAnotado = false;
+function revisarParo(s) {
+  const seg = s.seguridad;
+  if (seg && seg.activo && !paroAnotado) {
+    anotar({hora:hora(Date.now()), tipo:"paro", texto:"Paro: " + (MOTIVOS[seg.sensor] || seg.sensor), categoria:"", prob:"", accion:"paro_seguridad", area:"", latencia_ms:"", vib:s.lecturas?.vib_rms_g ?? "", temp:s.lecturas?.temp_c ?? "",
+            resumen:`${(+seg.valor).toFixed(2)} sobre ${(+seg.umbral).toFixed(2)}`});
+  }
+  paroAnotado = !!(seg && seg.activo);
+}
+$("exportar").addEventListener("click", () => {
+  const cols = ["hora", "tipo", "categoria", "prob", "accion", "area", "latencia_ms", "vib", "temp", "texto"];
+  const csv = [cols.join(",")].concat([...registro].reverse().map(r => cols.map(c => `"${String(r[c]).replaceAll('"', '""')}"`).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "andon-simulador.csv"; a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ---- ciclo principal
+async function refrescar() {
+  let s;
+  try { s = await api("/api/estado"); }
+  catch { $("banner").className = "paro"; $("banner").textContent = "Sin comunicación con la estación"; return; }
+  if (!cargado) {
+    pintarControles(s.sim);
+    $("u-vib").value = s.umbrales.vib_rms_g; $("u-temp").value = s.umbrales.temp_c; $("u-conf").value = s.umbrales.umbral_confianza;
+  }
+  umbrales = s.umbrales;
+  const sal = s.salidas || {}, nombre = s.estado && s.estado.estado, seg = s.seguridad;
+  const paro = seg && seg.activo;
+  $("banner").className = paro || !s.conectado ? "paro" : (nombre === "reposo" ? "" : "aviso2");
+  $("banner").textContent = !s.conectado ? "La web perdió la conexión MQTT"
+    : paro ? "PARO DE SEGURIDAD: " + (MOTIVOS[seg.sensor] || seg.sensor) + ". Queda retenido: normalizá la causa, ingresá el PIN y tocá «Reiniciar máquina»."
+    : (ESTADOS[nombre] || "Esperando datos…");
+  for (const c of ["roja", "amarilla", "verde"]) $("l-" + c).classList.toggle("on", sal.luz === c);
+  $("aspa").classList.toggle("on", !!sal.maquina);
+  $("bocina").classList.toggle("on", !!sal.zumbador);
+  $("maquina").textContent = sal.maquina === undefined ? "sin dato" : sal.maquina ? "en marcha" : "detenido";
+  $("zumbador").textContent = sal.zumbador === undefined ? "sin dato" : sal.zumbador ? "sonando" : "apagado";
+  $("oled").textContent = (sal.oled || []).join("\n\n");
+  $("estado").textContent = ESTADOS[nombre] || "—";
+  sonar(!!sal.zumbador);
+  agregar(s); revisarParo(s); revisarEventos(s);
+  const frescas = s.lecturas && s.lecturas_edad_s !== null && s.lecturas_edad_s < 5;
+  $("g-vib").textContent = frescas && s.lecturas.vib_rms_g != null ? s.lecturas.vib_rms_g.toFixed(3) + " g" : "sin dato";
+  $("g-temp").textContent = frescas && s.lecturas.temp_c != null ? s.lecturas.temp_c.toFixed(1) + " °C" : "sin dato";
+  dibujar("c-vib", series.vib, umbrales.vib_rms_g, 1.5);
+  dibujar("c-temp", series.temp, umbrales.temp_c, 70);
+  cargado = true;
+}
+refrescar(); setInterval(refrescar, 300);
+</script>
+{% endblock %}

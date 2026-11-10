@@ -51,6 +51,14 @@ OLED_REVISION = ["REVISION MANUAL", "Supervision"]
 OLED_ANALIZANDO = ["ANALIZANDO", "Espere..."]
 
 
+def _probabilidades(res):
+    """Probabilidades de las 5 categorías, para mostrar que el modelo sopesa opciones (D16)."""
+    if res is None or not isinstance(res.probabilidades, dict):
+        return None
+    return {c: round(float(p), 4) for c, p in res.probabilidades.items()
+            if c in ollama.CATEGORIAS and _numero(p)}
+
+
 def _numero(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
@@ -229,7 +237,10 @@ class Core:
                 accion = ACCION_YA_DETENIDA
             else:
                 self._aplicar(d, cat)
-            self._cerrar_evento(item, cat, prob, area, accion, error, lecturas)
+            modelo = {"umbral": umbral, "probs": _probabilidades(res),
+                      "entrada": ollama.construir_estado(item["texto"], lecturas["vib_rms_g"],
+                                                         lecturas["temp_c"])}
+            self._cerrar_evento(item, cat, prob, area, accion, error, lecturas, modelo)
 
     def _bloqueado(self):
         """Con paro retenido o la máquina detenida por el core, la luz roja no se toca:
@@ -253,13 +264,18 @@ class Core:
     def _lecturas(self):
         return {"vib_rms_g": self._vib, "temp_c": self._temp}
 
-    def _cerrar_evento(self, item, cat, prob, area, accion, error, lecturas):
-        """`error` es None o (código corto para la web, detalle para el registro)."""
+    def _cerrar_evento(self, item, cat, prob, area, accion, error, lecturas, modelo=None):
+        """`error` es None o (código corto para la web, detalle para el registro).
+        `modelo`: umbral, probabilidades de las 5 categorías y texto enviado (D16)."""
         latencia = round((self._reloj() - item["recibido"]) * 1000)
         codigo, detalle = error or (None, None)
-        evento = {"id": item["id"], "ts": self._ahora(), "lecturas": lecturas,
+        # D9: la placa no tiene hora fiable; se usa la del navegador más lo que tardó el análisis.
+        navegador = item.get("ts_navegador")
+        ts = self._ahora() if navegador is None else navegador + latencia / 1000
+        evento = {"id": item["id"], "ts": ts, "lecturas": lecturas,
                   "texto": item["texto"], "categoria": cat, "prob": prob, "accion": accion,
-                  "area": area, "latencia_ms": latencia, "error": codigo}
+                  "area": area, "latencia_ms": latencia, "error": codigo,
+                  "umbral": None, "probs": None, "entrada": None, **(modelo or {})}
         self.registro.guardar({
             "reporte_id": item["id"], "ts": evento["ts"], "vib_rms_g": lecturas["vib_rms_g"],
             "temp_c": lecturas["temp_c"], "texto": item["texto"], "categoria": cat, "prob": prob,

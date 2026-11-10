@@ -133,6 +133,33 @@ def test_se_reconfigura_tras_un_error_de_lectura(hal, bus):
     assert len(bus.escrituras) > n
 
 
+def test_mpu_ausente_no_golpea_el_bus_en_cada_muestra(gp, bus, tmp_path):
+    from andon.hal.rpi import REINTENTO_MPU_S
+    t = [0.0]
+    h = HalRpi(Config(), gpiod_mod=gp, smbus_mod=FakeSmbusModulo(bus), ruta_w1=str(tmp_path), reloj=lambda: t[0])
+    lecturas = []
+    bus.read_byte_data = lambda *a: (lecturas.append(a), (_ for _ in ()).throw(OSError(121, "Remote I/O")))[1]
+    for _ in range(100):                  # un segundo a 100 Hz
+        with pytest.raises(ErrorHardware):
+            h.leer_acel()
+        t[0] += 0.01
+    assert len(lecturas) == int(1 / REINTENTO_MPU_S)
+    h.cerrar()
+
+
+def test_mpu_que_aparece_se_usa_en_el_siguiente_intento(gp, bus, tmp_path):
+    from andon.hal.rpi import REINTENTO_MPU_S
+    t = [0.0]
+    h = HalRpi(Config(), gpiod_mod=gp, smbus_mod=FakeSmbusModulo(bus), ruta_w1=str(tmp_path), reloj=lambda: t[0])
+    bus.falla = True
+    with pytest.raises(ErrorHardware):
+        h.leer_acel()
+    bus.falla = False
+    t[0] += REINTENTO_MPU_S
+    assert h.leer_acel() == (0.0, 0.0, 1.0)
+    h.cerrar()
+
+
 # --- DS18B20 ---
 def test_lee_temperatura(hal):
     assert hal.leer_temp() == pytest.approx(25.125)

@@ -17,10 +17,32 @@ import random
 import threading
 import time
 
-from andon.hal.base import HAL, Salidas
+from andon.hal.base import HAL, ErrorHardware, Salidas
 
 FREC_HZ = 25.0
 PASO_TEMP_C = 0.0625
+
+# Controles del panel /simulador (sim/ajustar). Persisten hasta que se vuelvan a mover.
+AJUSTES_INICIALES = {"vib_g": 0.10, "ruido_g": 0.01, "temp_c": None, "mpu_ok": True, "ds18b20_ok": True}
+_RANGOS = {"vib_g": (0.0, 3.0), "ruido_g": (0.0, 0.5), "temp_c": (0.0, 120.0)}
+
+
+def validar_ajustes(campos):
+    """Copia validada de `campos`. `temp_c` None = modelo térmico automático. Lanza ValueError."""
+    limpios = {}
+    for clave, valor in campos.items():
+        if clave not in AJUSTES_INICIALES:
+            raise ValueError(f"control desconocido: {clave}")
+        if clave in ("mpu_ok", "ds18b20_ok"):
+            if not isinstance(valor, bool):
+                raise ValueError(f"{clave}: debe ser verdadero o falso")
+        elif not (clave == "temp_c" and valor is None):
+            minimo, maximo = _RANGOS[clave]
+            if (isinstance(valor, bool) or not isinstance(valor, (int, float))
+                    or not math.isfinite(valor) or not minimo <= valor <= maximo):
+                raise ValueError(f"{clave}: debe estar entre {minimo:g} y {maximo:g}")
+        limpios[clave] = valor
+    return limpios
 
 
 class HalSim(HAL):
@@ -37,6 +59,9 @@ class HalSim(HAL):
         self._temp_c = ambiente_c
         self._t_temp = reloj()
         self._inyeccion = None  # (vib_g|None, temp_c|None, vence_en)
+        self._temp_manual = None
+        self._mpu_ok = True
+        self._ds18b20_ok = True
         self._lock = threading.Lock()
         self._salidas = Salidas(maquina=maquina_inicial)
 
@@ -47,6 +72,16 @@ class HalSim(HAL):
         with self._lock:
             self._inyeccion = (vib_g, temp_c, self._reloj() + duracion_s)
 
+    def ajustar(self, **campos):
+        """Controles del panel: `vib_g`, `ruido_g`, `temp_c`, `mpu_ok`, `ds18b20_ok`."""
+        c = validar_ajustes(campos)
+        with self._lock:
+            self.vib_rms_g = c.get("vib_g", self.vib_rms_g)
+            self.ruido_g = c.get("ruido_g", self.ruido_g)
+            self._temp_manual = c.get("temp_c", self._temp_manual)
+            self._mpu_ok = c.get("mpu_ok", self._mpu_ok)
+            self._ds18b20_ok = c.get("ds18b20_ok", self._ds18b20_ok)
+
     def _inyeccion_activa(self, ahora):
         with self._lock:
             if self._inyeccion and ahora >= self._inyeccion[2]:
@@ -55,6 +90,8 @@ class HalSim(HAL):
 
     # --- entradas ---
     def leer_acel(self):
+        if not self._mpu_ok:
+            raise ErrorHardware("MPU-6050 desconectado (simulado)")
         t = self._reloj()
         inj = self._inyeccion_activa(t)
         vib = 0.0
@@ -69,13 +106,16 @@ class HalSim(HAL):
                 1.00 + amp * math.sin(w + 4.0) + g(0, self.ruido_g))
 
     def leer_temp(self):
+        if not self._ds18b20_ok:
+            raise ErrorHardware("DS18B20 desconectado (simulado)")
         t = self._reloj()
         inj = self._inyeccion_activa(t)
         objetivo = self.ambiente_c + (self.calentamiento_c if self._salidas.maquina else 0.0)
         dt = max(0.0, t - self._t_temp)
         self._temp_c += (objetivo - self._temp_c) * (1 - math.exp(-dt / self.tau_s))
         self._t_temp = t
-        valor = inj[1] if inj and inj[1] is not None else self._temp_c
+        base = self._temp_c if self._temp_manual is None else self._temp_manual
+        valor = inj[1] if inj and inj[1] is not None else base
         return round(valor / PASO_TEMP_C) * PASO_TEMP_C
 
     # --- salidas: solo quedan registradas (salidas()/suscribir) ---

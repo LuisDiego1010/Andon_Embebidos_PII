@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}{% endblock %} · Estación Andon</title>
+<style>
+  :root { --fondo:#14181d; --panel:#1f252c; --borde:#36404a; --texto:#eef1f4; --tenue:#a3afba;
+          --verde:#2fbf71; --amarilla:#f2b81f; --roja:#e5484d; --acento:#4da3ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:16px/1.45 system-ui,sans-serif; }
+  nav { display:flex; gap:16px; padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--borde); flex-wrap:wrap; }
+  nav strong { margin-right:auto; }
+  a { color:var(--acento); }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  main.ancho { max-width:1240px; }
+  section { background:var(--panel); border:1px solid var(--borde); border-radius:8px; padding:16px; margin-bottom:16px; }
+  h1 { font-size:1.3rem; margin:0 0 12px; } h2 { font-size:1.05rem; margin:0 0 12px; }
+  label { display:block; margin:10px 0 4px; color:var(--tenue); }
+  textarea,input { width:100%; padding:10px; font:inherit; color:var(--texto); background:var(--fondo); border:1px solid var(--borde); border-radius:6px; }
+  button { margin-top:12px; padding:10px 18px; font:inherit; font-weight:600; color:#08131f; background:var(--acento); border:0; border-radius:6px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.peligro { background:var(--amarilla); }
+  .tenue { color:var(--tenue); font-size:.9rem; } .error { color:var(--roja); }
+  .fila { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--borde); }
+  .fila:last-child { border-bottom:0; }
+  .aviso { padding:12px; border-radius:6px; border-left:5px solid var(--borde); background:var(--fondo); margin-top:12px; }
+  .aviso.verde { border-color:var(--verde); } .aviso.amarilla { border-color:var(--amarilla); } .aviso.roja { border-color:var(--roja); }
+</style>
+</head>
+<body>
+<nav><strong>Estación Andon</strong><a href="/">Reporte</a><a href="/tablero">Tablero</a><a href="/supervisor">Supervisor</a>{% if modo_sim %}<a href="/simulador">Simulador</a>{% endif %}<a href="/defensa">Defensa</a></nav>
+<main class="{% block clase_main %}{% endblock %}">{% block contenido %}{% endblock %}</main>
+<script>
+async function api(ruta, datos) {
+  const r = await fetch(ruta, datos === undefined ? {} : {method:"POST",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+  const cuerpo = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(cuerpo.error || "Error de comunicación."), {codigo:r.status});
+  return cuerpo;
+}
+const $ = id => document.getElementById(id);
+const CATEGORIAS = {operacion_normal:"Operación normal", falla_mecanica:"Falla mecánica", falla_electrica:"Falla eléctrica",
+  problema_calidad:"Problema de calidad", material_faltante:"Material faltante"};
+const ACCIONES = {ninguna:"Sin acción", parar_maquina:"Máquina detenida", avisar:"Aviso enviado", revision_manual:"Revisión manual",
+  paro_activo:"Paro de seguridad activo: no se actuó", maquina_detenida:"La máquina ya estaba detenida", descartado:"Descartado: estación ocupada"};
+const AREAS = {mantenimiento:"Mantenimiento", calidad:"Calidad", supervision:"Supervisión", "supervisión":"Supervisión"};
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>

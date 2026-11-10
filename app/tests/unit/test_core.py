@@ -251,7 +251,7 @@ def test_evento_con_los_campos_del_contrato(e):
     e.clasif.resultado = ("problema_calidad", 0.95)
     ev = e.reporte("piezas rayadas")
     assert set(ev) == {"id", "ts", "lecturas", "texto", "categoria", "prob", "accion", "area",
-                       "latencia_ms", "error"}
+                       "latencia_ms", "error", "umbral", "probs", "entrada"}
     assert ev["texto"] == "piezas rayadas" and ev["prob"] == 0.95 and ev["accion"] == "avisar"
     assert ev["id"] == "r1" and ev["error"] is None
 
@@ -396,3 +396,22 @@ def test_un_fallo_inesperado_no_tumba_el_trabajador():
         assert e.core.registro.contar() == 1
     finally:
         e.core.detener()
+
+
+
+def test_evento_trae_probabilidades_umbral_y_entrada():
+    e = Entorno()
+    e.lecturas(0.12, 31.0)
+    e.core._clasificar = lambda *a, **k: ollama.Resultado(
+        "falla_electrica", 0.98, 0.98, {"falla_electrica": 0.98, "falla_mecanica": 0.01, "otra": 0.5}, 1)
+    ev = e.reporte("Huele a quemado")
+    assert ev["probs"] == {"falla_electrica": 0.98, "falla_mecanica": 0.01}
+    assert ev["umbral"] == 0.92
+    assert ev["entrada"] == "Reporte del operario: Huele a quemado Lecturas de sensores: vibración 0.12 g RMS, temperatura 31.0 °C."
+
+
+def test_evento_sin_modelo_no_trae_probabilidades():
+    e = Entorno()
+    e.clasif.error = ollama.ErrorConexion("caído")
+    ev = e.reporte("Huele a quemado")
+    assert ev["probs"] is None and ev["error"] == "conexion"
