@@ -65,7 +65,7 @@ con la misma confianza. Anotar siempre la categoría y la confianza obtenidas.
 | O11 | Con el Wi-Fi apagado, pulsar «Enviar reporte» | «No hay conexión con la estación. Revise el Wi-Fi.»; el texto **no se borra** | ✅| |
 | O12 | Escribir 280 caracteres con tildes y ñ | El contador llega a 280, no deja escribir más y el reporte se acepta | ✅ envié emojis al azar y los aceptó: operación normal (confianza 50%)| |
 | O13 | Texto con un emoji (p. ej. «la banda hace ruido 🔧») | Se acepta. El contador puede marcar 2 por emoji: es esperado |✅ | |
-| O14 | Solo espacios | «Escriba qué está pasando.» | no pasa nada, se ponen 280 espacios y ya| |
+| O14 | Solo espacios | «Escriba qué está pasando.» | ✅| |
 | O15 | Con paro de seguridad activo (ver S1), abrir «Reporte» | Aviso rojo con el motivo («vibración excesiva: …»). El reporte se puede enviar y responde «Paro de seguridad activo: no se actuó» | ✅| |
 | O16 | Enviar 3 reportes seguidos desde 2 dispositivos | Todos reciben resultado, en orden. Ninguno se pierde | ✅| |
 | O17 | Legibilidad en el celular | Sin desplazamiento horizontal; botones fáciles de pulsar; porcentajes con coma decimal |✅ | |
@@ -96,9 +96,9 @@ con la misma confianza. Anotar siempre la categoría y la confianza obtenidas.
 
 | # | Acción | Esperado | Laptop | Placa |
 |---|---|---|---|---|
-| A1 | CU-07: vibración = 9 | «Vibración RMS máxima: debe ser mayor que 0 y como máximo 4.» El archivo no cambia |⚠️ mismo mensaje pero en inglés. Aparece como ventana flotante justo donde se escribe, no como en la ventana de texto de la interfaz | |
+| A1 | CU-07: vibración = 9 | «Vibración RMS máxima: debe ser mayor que 0 y como máximo 4.» El archivo no cambia |✅ | |
 | A2 | Vibración = 0,05 con el PIN correcto | «Umbrales guardados…». En ~1 s la estación se detiene por vibración (0,1 g > 0,05 g), **sin reiniciar servicios** | ✅| |
-| A3 | Restaurar vibración = 1 y reiniciar la máquina | Vuelve a verde | ✅ siempre estuvo en verde| |
+| A3 | Restaurar vibración = 1 y reiniciar la máquina | Vuelve a verde | ✅ | |
 | A4 | Confianza mínima = 0,5 y repetir O8 | Ahora puede clasificar sin revisión manual. Restaurar 0,92 al terminar | ✅ detuvo la máquina| |
 
 ---
@@ -107,7 +107,7 @@ con la misma confianza. Anotar siempre la categoría y la confianza obtenidas.
 
 | Ejecución | Fecha | Quién | Dispositivos | ✅ | ❌ | ⚠️ | Notas |
 |---|---|---|---|---|---|---|---|
-| Laptop | 11 nov 2026 | Eduardo | Firefox en la laptop (supervisor, tablero, simulador) y celular por la Wi-Fi local (operario) | 25 | 2 (corregidos) | 6 | Ver «Revisión» |
+| Laptop | 11 nov 2026 | Eduardo | Firefox en la laptop (supervisor, tablero, simulador) y celular por la Wi-Fi local (operario) | 28 | 0 | 5 | O14 y A1 corregidos y repetidos; ver «Revisión» |
 | Placa | | | | | | | |
 
 ## Revisión de la ejecución en la laptop (11 nov)
@@ -140,4 +140,6 @@ con confianza baja nunca la detiene ni la arranca (REQ-F08). No sustituye al par
 
 Evidencia: `docs/evidencias/f6-aceptacion-laptop-20261111.txt`.
 
-**Pendiente en la laptop:** repetir O14, A1, A2 y A3 con la corrección. **En la placa:** el guion completo (paso B3).
+**Repetición tras las correcciones (11 nov, 21:28):** O14, A1, A2 y A3 ✅. En A2 el umbral de 0,05 g se aplicó
+y la máquina se detuvo 17 ms después de recargarlo (vibración 0,093 g), sin reiniciar servicios.
+Quedan como ⚠️ O1 y O2 (se repiten en la placa) y O4–O6 (frases cortas, cambiadas en el guion). **En la placa:** el guion completo (paso B3).

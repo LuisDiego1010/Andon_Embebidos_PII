@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-11 (guion de aceptación ejecutado en la laptop: 25 ✅, 2 ❌ corregidos, 6 ⚠️; antes, 2026-11-10: se recorta QEMU, D17; correcciones del flujo de operador, punto de acceso y guiones de aceptación y demo; guía en `docs/traspaso.md`)
+Última actualización: 2026-11-11 (guion de aceptación ejecutado en la laptop: 28 ✅, 0 ❌, 5 ⚠️ tras corregir O14 y A1; antes, 2026-11-10: se recorta QEMU, D17; correcciones del flujo de operador, punto de acceso y guiones de aceptación y demo; guía en `docs/traspaso.md`)
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
@@ -172,7 +172,7 @@ Ollama falso y en la RPi 4 con el modelo real, `/defensa` 10 de 10).
 - [x] `docs/pruebas.md` con tabla RG, desviación RPi 5 → RPi 4 y sección de uso manual; faltan los resultados de la fase B
 - [x] Guiones `docs/aceptacion.md` (operador) y `docs/demo.md` (demostración)
 - [x] Guion de aceptación ejecutado en la laptop por el usuario (11 nov; revisión y evidencia en `docs/aceptacion.md`)
-- [ ] Repetir O14, A1, A2 y A3 en la laptop tras las correcciones del 11 nov
+- [x] Repetir O14, A1, A2 y A3 en la laptop tras las correcciones del 11 nov (todos ✅)
 - [ ] Etiqueta `v0.9-sim` en `app/dev`; entrega a Diego
 - [ ] *Opcional (D17):* instalador `make install DESTDIR=...` (la receta ya instala sin él)
 - [ ] *Opcional (D17):* pruebas `oeqa` contra la placa (`simpleremote`), con Diego
