@@ -276,3 +276,28 @@ Archivos listos en `app/deploy/red/` (guía y comprobación en su `README.md`). 
   calculando, así que **no se piden** `Nice` ni afinidad de CPU.
 - QEMU y `qemuarm64`: ya no hacen falta (D17). `make install` es opcional; la receta instala sin él.
 - Opcional: instalar también `tools/probar_calentamiento.py` en `/opt/andon/` (mide la latencia del modelo).
+
+---
+
+# Respuesta a las notas v2 (2026-11-11) · imagen final compilada
+
+Rama `app/imagen-final` (desde `app/dev`, que incluye `v0.9-sim`). Imagen del 11 nov, verificada por dentro
+(sistema de archivos leído con `debugfs`, sin la placa).
+
+| Pedido v2 | Cómo quedó |
+|---|---|
+| `hostapd.conf` en `/etc`, 0600 | `hostapd_%.bbappend` reemplaza el de la receta con `app/deploy/red/hostapd.conf` ✅ |
+| `dnsmasq.conf` en `/etc` | `dnsmasq_%.bbappend` lo reemplaza con `app/deploy/red/dnsmasq.conf` ✅ |
+| `10-wlan0.network` | Lo instala `andon-app` en `/etc/systemd/network/` ✅; la red la maneja `systemd-networkd` (habilitado) |
+| `hostapd` y `dnsmasq` habilitados | ✅ Con *drop-ins*: hostapd espera a que exista `wlan0`, hace `rfkill unblock wlan` y se reintenta; dnsmasq se reintenta |
+| `wpa_supplicant` sin tomar `wlan0` | Instalado pero **no habilitado** ✅ |
+| Firmware `bcm43455` | En la imagen (`linux-firmware-rpidistro-bcm43455`) ✅ |
+| Sin `debug-tweaks` | ✅ Reemplazado por `allow-root-login` (`PermitRootLogin yes`) y contraseña de root con `extrausers` |
+| Claves SSH | Decisión de Diego: **contraseña de root** en vez de claves, para que sirva desde cualquier PC |
+| `probar_calentamiento.py` | En `/opt/andon/` ✅ |
+
+**Acceso:** `ssh root@<placa>` con la contraseña acordada (está en el canal del equipo, no aquí). El hash
+SHA-512 está en `andon-image.bb` y el repositorio es público: **cambiarla en la placa al grabarla** (`passwd`),
+junto con el PIN y la clave Wi-Fi (paso B0). Sin `debug-tweaks`, la consola local también pide contraseña.
+
+**Falta probar en la placa (B2):** que `Andon-E1` transmita, que el celular reciba IP y abra la web.

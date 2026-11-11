@@ -7,6 +7,12 @@ require recipes-core/images/core-image-base.bb
 
 IMAGE_FEATURES += "ssh-server-openssh"
 
+# Contraseña de root (con allow-root-login de andon.yml, sirve también por SSH). El hash es SHA-512;
+# el repositorio es público y la contraseña es simple: cambiarla en la placa al grabarla (passwd).
+inherit extrausers
+ANDON_ROOT_HASH = "\$6\$7pa.QpjUwRaTlg5U\$Kjkk0.uvk1HAxdEaUhQYwxVzQCAhjEZCiUYzImG7t9sFgPbIYV/I6hQoSff6nWL8g5eBgbyJoBEKgEDLkAsLF0"
+EXTRA_USERS_PARAMS = "usermod -p '${ANDON_ROOT_HASH}' root;"
+
 IMAGE_INSTALL:append = " \
     ollama-bin \
     ollama-model-tev1 \

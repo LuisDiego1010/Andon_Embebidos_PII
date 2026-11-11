@@ -53,10 +53,10 @@ local_conf_header:
     # Licencia del firmware de Wi-Fi de la Raspberry Pi
     LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
 
-  andon-desarrollo: |
-    # SOLO para desarrollo: root sin contraseña y acceso por SSH.
-    # Quitar antes de cualquier uso real.
-    EXTRA_IMAGE_FEATURES += "debug-tweaks"
+  andon-acceso: |
+    # Sin debug-tweaks (root ya no entra sin contraseña). Solo se permite que root entre por SSH;
+    # la contraseña se fija en meta-andon/recipes-core/images/andon-image.bb.
+    EXTRA_IMAGE_FEATURES += "allow-root-login"
 
   andon-compilacion: |
     # Formatos de salida: imagen para grabar en la microSD con bmaptool o dd
