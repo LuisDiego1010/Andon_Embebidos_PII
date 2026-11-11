@@ -1,6 +1,6 @@
 # Plan de ejecución — app de la Estación Andon
 
-Última actualización: 2026-11-09 (F5 cerrada; app completa probada en la RPi 4 con la imagen Yocto; guía en `docs/traspaso.md`)
+Última actualización: 2026-11-10 (se recorta QEMU, D17; correcciones del flujo de operador, punto de acceso y guiones de aceptación y demo; guía en `docs/traspaso.md`)
 
 El trabajo se organiza en **fases**, no en días. Varias fases pueden avanzar en
 una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salida.
@@ -10,6 +10,8 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 - **9 nov: la defensa se hace sin sensores físicos** (decisión del equipo). El panel `/simulador`
   reemplaza a los sensores con el mismo código de producción (D15). Falta confirmarlo con el
   profesor; el bloque hardware pasa a opcional.
+- **10 nov: se recorta el nivel 3 (QEMU con Debian arm64)** (D17). Lo que iba a validar ya está
+  probado en la RPi 4 con la imagen Yocto. `make install` y `oeqa` pasan a opcionales.
 - **Placa (préstamo):** solo disponible entre semana. Las tareas marcadas
   🔌 requieren la RPi 4 y deben agendarse en días hábiles.
 - **F0 a F6 terminadas antes del lunes 9.** Del lunes 9 al jueves 12 solo pruebas (F7).
@@ -32,17 +34,18 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | D3 | `andon-web` | Proceso separado, comunica por MQTT (respaldo: Flask dentro de core) | Cerrada |
 | D4 | Contrato con /v1/systemone | Formato fijado; timeout 45 s (medido en la RPi 4); calentamiento al arrancar; umbral 0,92 provisional; REQ-N05 no se cumple y se reporta (ver `decisiones/D4-contrato-systemone.md`); error → amarillo | Cerrada (umbral a reconfirmar en F4/F7) |
 | D5 | OLED | Controlador propio sobre smbus2 (`hal/ssd1306.py`, en hilo aparte; una OLED ausente no afecta al paro) | Escrito y probado con dobles; falta pantalla real |
-| D6 | Simulación | Muestras crudas inyectables; Ollama real en Docker, falso en QEMU | Cerrada |
+| D6 | Simulación | Muestras crudas inyectables; Ollama real en Docker y en la placa, falso en pruebas y en `simulador-pc.sh` | Cerrada |
 | D7 | Configuración y recarga | Archivo + aviso `cmd/recargar` (`decisiones/D7-configuracion-y-recarga.md`) | Cerrada (F4) |
 | D8 | Acceso supervisor/admin | PIN en la configuración, validado en la web; bloqueo de 30 s tras 5 fallos | Cerrada (F5) |
 | D9 | Hora sin Internet | Hora del navegador enviada por el formulario; `evento.ts` = esa hora + latencia | Cerrada (F5) |
 | D10 | Tablero | MQTT + página `/tablero` (la web guarda en memoria lo último publicado) | Cerrada (F5) |
-| D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo; modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
+| D11 | Estrategia sin hardware | App completa en simulación (rebanada completa primero); la RPi en modo sim (nivel 3b); QEMU de respaldo (recortado, D17); modo sim seguro; tabla simulación/hardware (`decisiones/D11-estrategia-simulacion.md`) | Cerrada |
 | D12 | Tópico `salidas` | Estado real de las salidas (retenido, sensores → web), en sim y en la placa (`decisiones/D12-topico-salidas.md`) | Cerrada |
 | D13 | Falla de sensor | 2 s sin lectura válida → paro retenido, `sensor: "*_fallo"` (`decisiones/D13-falla-de-sensor.md`) | Cerrada |
 | D14 | `evento` con `id` y `error` | Cambio de contrato aprobado en F4 (`decisiones/D14-evento-con-id-y-error.md`) | Cerrada |
 | D15 | Panel del simulador | `/simulador` y tópico `sim/ajustar` (retenido), solo en modo sim (`decisiones/D15-panel-simulador.md`) | Cerrada |
 | D16 | `evento` con probabilidades | `probs`, `umbral` y `entrada` en cada evento (`decisiones/D16-evento-con-probabilidades.md`) | Cerrada |
+| D17 | Sin QEMU | Se recorta el nivel 3; el nivel 2 (Docker arm64) se mantiene; `make install` y `oeqa` opcionales (`decisiones/D17-sin-qemu.md`) | Cerrada |
 
 ## Niveles de prueba
 
@@ -50,7 +53,7 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 |---|---|---|---|---|
 | 1 | Docker `dev` (x86) | Sim | Real (contenedor) | Lógica, contrato, exactitud |
 | 2 | Docker `--platform linux/arm64` | Sim | Falso | Compatibilidad aarch64 |
-| 3 | QEMU (Debian arm64); respaldo sin placa, fines de semana | Sim | Falso | systemd, instalador, flujo completo |
+| ~~3~~ | ~~QEMU (Debian arm64)~~ — **recortado (D17)**: lo cubre el 3b con la imagen real | — | — | — |
 | 3b | RPi 4 con la imagen Yocto, `ANDON_MODO=sim` (drop-in de prueba) | Sim | Real | systemd, REQ-N06, latencia real, contención de CPU (paro < 1 s con Ollama calculando) |
 | 4 | RPi 4 real | Reales | Real | Latencia, umbrales, periféricos, demo |
 
@@ -65,6 +68,9 @@ una misma sesión. Una fase se da por cerrada cuando cumple su criterio de salid
 | Bitácora de trabajo | `docs/` (plantilla propia) | Cada sesión |
 | Código, configuración e instalador | `app/`, `docker/` | F1–F6 |
 | Evidencias de pruebas | `docs/evidencias/` | F7 |
+| Guía paso a paso para generar e instalar la imagen (instructivo) | `README.md` («Generar la imagen») y `docs/pruebas-placa.md` | F6 (Diego) |
+| Guion de aceptación del operador | `docs/aceptacion.md` | F6 (laptop) y F7 (placa) |
+| Guion de la demostración (incluye el flujo Yocto, H6) | `docs/demo.md` | F7 |
 
 ## Fases
 
@@ -151,19 +157,28 @@ solicitud desde Python devuelve categoría y probabilidad; requisitos v1 entrega
 **Criterio de salida:** CU-01 a CU-07 se ejecutan desde el navegador en simulación ✅ (9 nov: en la PC con
 Ollama falso y en la RPi 4 con el modelo real, `/defensa` 10 de 10).
 
-### F6 · Empaquetado y QEMU
-- [ ] Instalador (`make install DESTDIR=...`)
+### F6 · Empaquetado y red para la demo
 - [x] Unidades systemd en la receta `andon-app`, habilitadas; Mosquitto sin `network-online` (H1)
-- [ ] Red para la demo: hostapd y dnsmasq (punto de acceso propio) o hotspot de celular
-- [ ] `config/andon-qemu.conf`
 - [x] 3b: la RPi 4 con la imagen de Diego en modo sim (`tools/modo.sh sim`); paro 340–375 ms con Ollama calculando
-- [ ] QEMU con Debian arm64: los servicios arrancan solos (REQ-N06); CU-01 a CU-07 en sim
-- [ ] Pruebas `oeqa` para el `testimage` de Diego
-- [ ] `docs/yocto-requisitos.md` **v2**: rutas, instalador, unidades, pruebas
-- [ ] `docs/pruebas.md` **cerrada**: requisitos previos, procedimiento por nivel y por CU, tabla de resultados
+- [x] `scripts/simulador-pc.sh` con docker o podman, `--ollama-real` y `--lan`: la estación completa en la laptop (10 nov)
+- [x] Correcciones del flujo de operador, sin cambiar contrato ni invariantes (10 nov):
+      reporte durante el calentamiento, texto que no se borra, errores de red en español, evento recuperado de
+      `estado.ultimo_evento`, `/supervisor` que verifica el reinicio, tablero con área/confianza/hora,
+      `/defensa` solo en modo sim. 352 pruebas en verde
+- [x] Punto de acceso propio: `app/deploy/red/` (hostapd, dnsmasq, systemd-networkd); `dnsmasq --test` OK
+- [ ] 🔌 Red para la demo funcionando en la placa (paso B2)
+- [ ] 🔌 Arranque tras un corte de corriente con la app en marcha; el paro retenido se conserva (REQ-N06, CU-06)
+- [x] `docs/yocto-requisitos.md` **v2**: red, secretos, etiqueta (10 nov)
+- [x] `docs/pruebas.md` con tabla RG, desviación RPi 5 → RPi 4 y sección de uso manual; faltan los resultados de la fase B
+- [x] Guiones `docs/aceptacion.md` (operador) y `docs/demo.md` (demostración)
+- [ ] Guion de aceptación ejecutado en la laptop por el usuario (`simulador-pc.sh --ollama-real --lan`)
 - [ ] Etiqueta `v0.9-sim` en `app/dev`; entrega a Diego
+- [ ] *Opcional (D17):* instalador `make install DESTDIR=...` (la receta ya instala sin él)
+- [ ] *Opcional (D17):* pruebas `oeqa` contra la placa (`simpleremote`), con Diego
+- ~~`config/andon-qemu.conf`~~ y ~~QEMU con Debian arm64~~: recortados (D17)
 
-**Criterio de salida:** niveles 3 y 3b en verde (3b si hay placa) y guía de pruebas lista para usar en la placa, con la tabla simulación/hardware.
+**Criterio de salida:** 3b en verde con la imagen Yocto (✅ 9 nov), red para la demo funcionando, arranque
+tras corte de corriente probado y guía de pruebas lista para usar en la placa, con la tabla simulación/hardware.
 
 ### Bloque hardware (sin fecha: depende de la llegada del material)
 Lo que solo se cierra con sensores y actuadores reales (D11). Se hacen en este orden.
@@ -178,6 +193,19 @@ Pasos y checklist eléctrica: `docs/guia-hardware.md`.
 ### F7 · Pruebas (lunes 9 a jueves 12)
 Se ejecuta siguiendo `docs/pruebas.md`. Sin desarrollo nuevo: solo correcciones,
 cada una con su etiqueta `v1.0-rcN`.
+
+**Aceptación final en la placa (10 nov: orden acordado para el primer día con placa):**
+- [ ] B0 Imagen de `v0.9-sim`; PIN y clave Wi-Fi cambiados en la placa; `verificar-imagen.sh`
+- [ ] B1 `probar_sin_hardware.py` 70/70 con evidencia
+- [ ] B2 Celular en `Andon-E1` abre `http://192.168.4.1:5000`
+- [ ] B3 `docs/aceptacion.md` completo desde el celular con el modelo real
+- [ ] B4 `/defensa` 10/10 y CSV
+- [ ] B5 Corte de corriente con paro retenido y con un reporte en análisis; `andon.db` íntegra
+- [ ] B6 Sin Internet: solo el punto de acceso, sin conexiones salientes (REQ-N01)
+- [ ] B7 Ensayo cronometrado de `docs/demo.md`
+- [ ] B8 *Opcional:* LEDs externos (modo híbrido, `docs/guia-hardware.md` §6, requiere aprobación)
+
+Tareas anteriores (antes de la decisión del 9 nov de demo simulada):
 
 - [ ] 🔌 App completa en la RPi 4 con Raspberry Pi OS; calibración de umbrales
 - [ ] 🔌 CU-01 a CU-07 en hardware con evidencia (video y registro)
@@ -210,7 +238,8 @@ está en las ramas, no en `main`.
 No se recorta el núcleo mínimo: CU-02, CU-03 y CU-05 con registro.
 
 ## Contingencia Yocto
-Si el miércoles 11 a mediodía la imagen Yocto no arranca la app en la RPi 4:
-demo sobre Raspberry Pi OS, y la imagen Yocto se muestra por separado
-(arrancando en QEMU o en la placa). En ese caso RG-3 no queda cumplido y la
-fusión a `main` la decide el Director.
+**No aplica desde el 9 nov:** la imagen Yocto arranca la app completa en la RPi 4.
+Plan original, como historia: si el miércoles 11 a mediodía la imagen Yocto no arrancaba la app en
+la RPi 4, la demo sería sobre Raspberry Pi OS y la imagen Yocto se mostraría por separado
+(arrancando en QEMU o en la placa). En ese caso RG-3 no quedaba cumplido y la
+fusión a `main` la decidía el Director.

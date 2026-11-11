@@ -73,7 +73,10 @@ Todo lo demás es biblioteca estándar (`urllib`, `sqlite3`, `json`, `threading`
   `v1.0-rcN`), nunca desde una rama.
 
 ## 7. QEMU
-- Necesito una imagen `qemuarm64` de la misma capa para el nivel 3 de pruebas
+> **10 nov: ya no aplica.** El nivel 3 se recortó (`decisiones/D17-sin-qemu.md`): la imagen real ya
+> arranca la app en la RPi 4. No hace falta `qemuarm64` ni `andon-qemu.conf`. Se conserva como historia.
+
+- Necesitaba una imagen `qemuarm64` de la misma capa para el nivel 3 de pruebas
   (systemd, instalador, flujo completo) con `tools/fake_ollama.py` en lugar de Ollama
   real y `ANDON_MODO=sim`.
 - En el nivel 3 la app corre con `config/andon-qemu.conf` (URL del Ollama falso).
@@ -89,7 +92,7 @@ Todo lo demás es biblioteca estándar (`urllib`, `sqlite3`, `json`, `threading`
 3. ¿Cómo se incluye el modelo `tev1:0.8b` y qué versión de Ollama se empaqueta (≥ 0.40.4)?
 4. ¿Pin del bus 1-Wire y overlays de I2C / 1-Wire?
 5. ¿Usuario de servicio, grupos y reglas udev?
-6. ¿Imagen `qemuarm64` disponible para el nivel 3?
+6. ~~¿Imagen `qemuarm64` disponible para el nivel 3?~~ Cerrada: no hace falta (D17).
 
 ---
 
@@ -232,3 +235,44 @@ Detalle en `docs/decisiones/`.
 - `andon-web` (F5) sigue sin `__main__.py`: su unidad se queda desactivada.
 - **Pendiente de probar en la placa:** `andon-core` y `andon-sensores` juntos en modo sim con el
   Ollama real de la imagen (procedimiento en `docs/pruebas.md`).
+
+
+---
+
+# Notas v2 (2026-11-10) · imagen final para la demo
+
+Lo que la app necesita de la imagen para la aceptación final en la placa (plan, fase B). La imagen se
+compila con el árbol en la etiqueta **`v0.9-sim`** (`git checkout v0.9-sim` antes de `kas-container build`).
+
+## 1. Punto de acceso Wi-Fi propio (propuesta, Tablas 4, 7 y 8)
+Archivos listos en `app/deploy/red/` (guía y comprobación en su `README.md`). Con `externalsrc` quedan en
+`${S}/deploy/red/`. Pedido para la receta `andon-app` (o una receta `andon-red`, como prefieras):
+
+| Origen | Destino | Permisos |
+|---|---|---|
+| `deploy/red/hostapd.conf` | `/etc/hostapd.conf` | 0600 (trae la clave Wi-Fi) |
+| `deploy/red/dnsmasq.conf` | `/etc/dnsmasq.conf` | 0644 |
+| `deploy/red/10-wlan0.network` | `/etc/systemd/network/10-wlan0.network` | 0644 |
+
+- Habilitar `hostapd.service` y `dnsmasq.service`. Ojo: las recetas de hostapd y dnsmasq traen su
+  propio archivo de configuración en esas rutas, y hay que reemplazarlo.
+- Confirmar que la red la gestiona **systemd-networkd** (`networkctl` en la placa). Si la gestiona otro
+  servicio, avisame y adapto el archivo `.network`.
+- `wpa_supplicant` **no** debe tomar `wlan0` (que no esté habilitado `wpa_supplicant@wlan0`).
+- Firmware Wi-Fi de la RPi 4: `linux-firmware-rpidistro-bcm43455` (debería llegar por
+  `MACHINE_EXTRA_RRECOMMENDS`; verificar con `ls /lib/firmware/brcm/`).
+- `rfkill` con la Wi-Fi desbloqueada al arrancar.
+- `dnsmasq.conf` usa `bind-dynamic` y solo atiende `wlan0`: no choca con systemd-resolved.
+
+## 2. Acceso y secretos
+- **Quitar `debug-tweaks`** de `andon.yml` (root sin contraseña). Para seguir entrando por SSH: claves
+  públicas de los dos en `/root/.ssh/authorized_keys` (por ejemplo, con una receta pequeña o `ROOTFS_POSTPROCESS_COMMAND`).
+- El **PIN** (`/etc/andon/andon.conf`) y la **clave Wi-Fi** (`/etc/hostapd.conf`) **no van al repositorio
+  público**. Se cambian en la placa al grabarla (paso B0 del plan), con `sed`, y luego se reinician
+  `andon-web` y `hostapd`.
+
+## 3. Sin cambios
+- Unidades `andon-*`, Mosquitto (H1) y Ollama: como están. El paro midió 340–375 ms con el modelo
+  calculando, así que **no se piden** `Nice` ni afinidad de CPU.
+- QEMU y `qemuarm64`: ya no hacen falta (D17). `make install` es opcional; la receta instala sin él.
+- Opcional: instalar también `tools/probar_calentamiento.py` en `/opt/andon/` (mide la latencia del modelo).
