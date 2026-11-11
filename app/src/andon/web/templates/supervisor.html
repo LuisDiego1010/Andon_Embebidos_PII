@@ -19,13 +19,15 @@
 </section>
 <section>
   <h2>Umbrales</h2>
-  <form id="form">
-    <label for="vib_rms_g">Vibración RMS máxima (g)</label>
-    <input id="vib_rms_g" type="number" step="any" min="0.001" max="4" required>
-    <label for="temp_c">Temperatura máxima (°C)</label>
-    <input id="temp_c" type="number" step="any" min="0.1" max="125" required>
-    <label for="umbral_confianza">Confianza mínima del modelo (0 a 1)</label>
-    <input id="umbral_confianza" type="number" step="any" min="0.01" max="1" required>
+  <!-- Campos de texto y no numéricos: el navegador interpreta la coma según su idioma
+       («0,05» llegó a guardarse mal) y muestra sus avisos en inglés. Valida el servidor, en español. -->
+  <form id="form" novalidate>
+    <label for="vib_rms_g">Vibración RMS máxima (g, mayor que 0 y hasta 4)</label>
+    <input id="vib_rms_g" type="text" inputmode="decimal" autocomplete="off">
+    <label for="temp_c">Temperatura máxima (°C, mayor que 0 y hasta 125)</label>
+    <input id="temp_c" type="text" inputmode="decimal" autocomplete="off">
+    <label for="umbral_confianza">Confianza mínima del modelo (mayor que 0 y hasta 1)</label>
+    <input id="umbral_confianza" type="text" inputmode="decimal" autocomplete="off">
     <button>Guardar umbrales</button>
   </form>
   <div id="msg-umbrales" class="aviso" hidden></div>
@@ -52,7 +54,7 @@ async function cargar(llenar) {
   try {
     const s = await api("/api/estado");
     pintar(s);
-    if (llenar) for (const c of CAMPOS) $(c).value = s.umbrales[c];
+    if (llenar) for (const c of CAMPOS) $(c).value = String(s.umbrales[c]).replace(".", ",");
     return s;
   } catch { $("actual").textContent = "sin comunicación"; return null; }
 }

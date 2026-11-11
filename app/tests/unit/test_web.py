@@ -151,7 +151,7 @@ def test_umbrales_se_guardan_y_avisan(entorno):
 @pytest.mark.parametrize("valores", [
     {"vib_rms_g": "0"}, {"vib_rms_g": "-1"}, {"vib_rms_g": "4.1"}, {"temp_c": "126"},
     {"umbral_confianza": "1.5"}, {"temp_c": "abc"}, {"temp_c": "nan"}, {"temp_c": "inf"},
-    {"pin": "1"}, {},
+    {"vib_rms_g": "1,2,3"}, {"vib_rms_g": "0,0"}, {"pin": "1"}, {},
 ])
 def test_umbrales_invalidos_no_tocan_el_archivo(entorno, valores):
     broker, _, web, ruta, _ = entorno
@@ -159,6 +159,25 @@ def test_umbrales_invalidos_no_tocan_el_archivo(entorno, valores):
     assert web.post("/api/umbrales", json={"pin": "1234", "valores": valores}).status_code == 400
     assert ruta.read_bytes() == antes
     assert broker.de(topicos.CMD_RECARGAR) == []
+
+
+def test_umbrales_aceptan_coma_decimal(entorno):
+    # Aceptación en la laptop (11 nov, A2): el supervisor escribe «0,05» como se lee en la página
+    _, _, web, ruta, _ = entorno
+    valores = {"vib_rms_g": "0,05", "umbral_confianza": "0,5"}
+    assert web.post("/api/umbrales", json={"pin": "1234", "valores": valores}).status_code == 200
+    c = cargar(ruta=str(ruta), entorno={})
+    assert (c.umbrales.vib_rms_g, c.ollama.umbral_confianza) == (0.05, 0.5)
+
+
+@pytest.mark.parametrize("ruta", ["/", "/supervisor"])
+def test_formularios_no_usan_la_validacion_del_navegador(entorno, ruta):
+    # Aceptación en la laptop (11 nov, O14 y A1): los avisos nativos salen en el idioma del
+    # navegador (inglés) o no salen. La página y el servidor validan, en español.
+    _, _, web, _, _ = entorno
+    html = web.get(ruta).get_data(as_text=True)
+    assert '<form id="form" novalidate>' in html
+    assert 'type="number"' not in html and " required" not in html
 
 
 def test_error_de_umbral_usa_el_nombre_que_ve_el_supervisor(entorno):

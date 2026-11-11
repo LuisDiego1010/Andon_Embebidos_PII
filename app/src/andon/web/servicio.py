@@ -196,7 +196,8 @@ class ServicioWeb:
                 raise ErrorConfig(f"campo desconocido: {campo}")
             seccion, clave, maximo, nombre = UMBRALES[campo]
             try:
-                numero = float(texto)
+                # El supervisor escribe con coma decimal (es-CR): «0,05» = 0.05
+                numero = float(texto.replace(",", ".") if isinstance(texto, str) else texto)
             except (TypeError, ValueError):
                 raise ErrorConfig(f"{nombre}: no es un número.") from None
             if not math.isfinite(numero) or not 0 < numero <= maximo:
