@@ -4,9 +4,10 @@
 <section>
   <h1>Reportar lo que pasa en la máquina</h1>
   <div id="estacion" class="aviso" hidden></div>
-  <form id="form">
-    <label for="texto">Descripción</label>
-    <textarea id="texto" rows="4" maxlength="{{ max_texto }}" placeholder="Ej.: huele a quemado cerca del motor" required></textarea>
+  <!-- novalidate: los avisos los da la página, en español, no el navegador -->
+  <form id="form" novalidate>
+    <label for="texto">Describa qué ve, oye o huele, y dónde</label>
+    <textarea id="texto" rows="4" maxlength="{{ max_texto }}" placeholder="Ej.: huele a quemado y salió una chispa del cable de alimentación"></textarea>
     <div class="tenue"><span id="cuenta">0</span> / {{ max_texto }} caracteres</div>
     <button id="enviar">Enviar reporte</button>
   </form>
@@ -96,6 +97,7 @@ async function seguir(p) {
 
 $("form").addEventListener("submit", async ev => {
   ev.preventDefault();
+  if (!texto.value.trim()) { mostrar("roja", "Escriba qué está pasando."); texto.focus(); return; }
   bloquear(true);
   try {
     const r = await api("/api/reporte", {texto: texto.value, ts_navegador: Date.now() / 1000});
