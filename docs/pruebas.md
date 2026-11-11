@@ -1,7 +1,8 @@
 # Guía de pruebas
 
-Se escribe a lo largo de F2–F6 y se cierra en F6 (requisitos previos, procedimiento por
-nivel y por caso de uso, y tabla de resultados). Estado: **en construcción**.
+Requisitos previos, procedimiento por nivel y por caso de uso, y tabla de resultados.
+Estado (10 nov): **procedimientos completos**; faltan los resultados de la aceptación final en la placa
+(fase B de `docs/plan.md`) y del guion del operador (`docs/aceptacion.md`).
 
 ## Niveles de prueba
 Ver `docs/plan.md` (Niveles de prueba). Comandos base:
@@ -18,6 +19,24 @@ docker run --rm --platform linux/arm64 -v "$PWD":/work:ro -w /work \
     sh -c "pip install -q pytest && python -m pytest -p no:cacheprovider -q app/tests/unit"
 ```
 
+## Requisitos generales (RG) de la propuesta
+
+La propuesta (Tabla 1) resume el instructivo en cinco requisitos generales. Cada uno se cumple a través de
+los requisitos específicos de la tabla siguiente.
+
+| RG | Enunciado (propuesta, Tabla 1) | Requisitos | Estado | Evidencia |
+|---|---|---|---|---|
+| RG-1 | Ejecutar un modelo de decisión local con Ollama y la API JEV | REQ-F04, F05, F08, N01, N05 | ✅ (N05 ❌ reportado; N01 se cierra en B6) | D4; `app/tests/contract/`; `docs/evidencias/f4-*`, `f7-defensa-placa-20261109.*` |
+| RG-2 | Implementar el sistema sobre el kit Raspberry Pi | REQ-N02, N07 | ✅ en RPi 4 (ver la desviación abajo); N07 sin cableado | `f7-placa-sin-hardware-20261109.txt` |
+| RG-3 | Generar la imagen con Yocto, integrando Ollama y las dependencias | REQ-N02, N03, N06 | ✅; falta el corte de corriente (B5) | `README.md` (generar y grabar), `docs/pruebas-placa.md`, `meta-andon/` |
+| RG-4 | Integrar sensores y actuadores | REQ-F01, F02, F07, F09, F11, N04 | 🟡 **simulados** (decisión del equipo, 9 nov): mismo código de producción, sin chips reales. Ampliable: `docs/guia-hardware.md` | `f3-*`, `f7-*`; `docs/guia de uso.md` §4–5 |
+| RG-5 | Demostrar la operación con casos de uso específicos | REQ-F03, F06, F10; CU-01…CU-07 | ✅ `/defensa` 10/10 en la placa; falta la aceptación manual del operador (B3) | `f7-defensa-placa-20261109.*`, `docs/aceptacion.md` |
+
+**Desviación de plataforma:** la propuesta (REQ-N02, Tabla 4) indica una **Raspberry Pi 5**. Se usa una
+**Raspberry Pi 4** (aarch64, Cortex-A72), que fue la placa disponible (`docs/yocto-requisitos.md` §1). El
+código no cambia con la RPi 5: todo GPIO va por libgpiod y la imagen solo cambia `MACHINE`. La latencia del
+modelo (REQ-N05, ≈ 17 s) se midió en la RPi 4; en la RPi 5 se espera menor.
+
 ## Estado por requisito: simulación y hardware (D11)
 
 Cada requisito tiene dos columnas para no dar por probado en hardware lo que solo se
@@ -30,7 +49,7 @@ Leyenda: ✅ probado · 🟡 parcial · ⏳ pendiente · ❌ no cumple · — no
 |---|---|---|---|
 | REQ-F01 vibración ≥ 100 Hz, RMS cada 1 s | ✅ | ⏳ | Lazo medido a 100,0 Hz sin atrasos (PC); RMS de ventana de 1 s cada 100 ms |
 | REQ-F02 temperatura ≥ 1 Hz | ✅ | ⏳ | Hilo aparte a 1 Hz; el DS18B20 real tarda ~750 ms por lectura |
-| REQ-F03 formulario web (≤ 280) | ✅ F5 | — | Formulario, tablero, supervisor y simulador; probado en navegador (Chromium) en la PC y en la RPi 4 (9 nov) |
+| REQ-F03 formulario web (≤ 280) | ✅ F5 | — | Formulario, tablero, supervisor y simulador; probado en navegador (Chromium) en la PC y en la RPi 4 (9 nov). Uso manual por un operador desde el celular: `docs/aceptacion.md` (pendiente) |
 | REQ-F04 estado → `/v1/systemone` | ✅ | ✅ | Cliente probado en Docker y en la RPi 4 (D4) |
 | REQ-F05 cinco categorías | ✅ | ✅ | 16/16 reportes claros; conjunto pequeño y fácil |
 | REQ-F06 área responsable | ✅ F4 | — | Tabla 9: mantenimiento, calidad o supervisión en cada `evento` (CU-03/04/05, modelo real en Docker y en la RPi 4) |
@@ -39,7 +58,7 @@ Leyenda: ✅ probado · 🟡 parcial · ⏳ pendiente · ❌ no cumple · — no
 | REQ-F09 torre, zumbador, OLED | ✅ | 🟡 | Torre, zumbador y OLED virtuales en la web. En la placa, los 5 GPIO quedan como salidas de `andon-sensores` y GPIO17 en bajo durante el paro (9 nov). OLED: controlador escrito y probado con dobles, sin pantalla real (D5) |
 | REQ-F10 registro de eventos | ✅ F4 | ✅ | SQLite (`db_ruta`): fecha, lecturas, texto, categoría, probabilidad, acción, área, latencia y error. En la placa se escribe en `/var/lib/andon/andon.db` (9 nov) |
 | REQ-F11 publicación MQTT | ✅ F3–F5 | ✅ | `lecturas`, `seguridad`, `salidas`, `evento` y `estado` con Mosquitto real, en Docker y en la placa |
-| REQ-N01 sin Internet | 🟡 | 🟡 | Modelo y servicios locales (Diego); se cierra en F7 |
+| REQ-N01 sin Internet | 🟡 | 🟡 | Modelo y servicios locales; la web no carga recursos externos (prueba automática). Se cierra en la placa solo con el punto de acceso, sin cable (paso B6) |
 | REQ-N02 RPi + Yocto | — | ✅ | La imagen arranca la app completa en la RPi 4 (9 nov) |
 | REQ-N03 Ollama y modelo preinstalados | — | ✅ | `ollama list` en la imagen, sin descargas (Diego, 5 nov; verificado 6 nov) |
 | REQ-N04 paro < 1 s | ✅ | 🟡 | Sim en PC: ≈ 200 ms desde la inyección y 0,7–1,1 ms desde la muestra que cruza el umbral. En la RPi 4 en modo sim con Ollama calculando: 272–375 ms (6 y 9 nov), 340 ms visto desde el navegador. Faltan sensores reales |
@@ -111,7 +130,7 @@ fue a revisión manual. La confianza depende de la redacción (D4, hallazgo 4): 
 usa la frase de la tabla (0,987). En la RPi 4 la latencia será ≈ 17 s por reporte (REQ-N05 no se cumple, D4);
 durante el análisis la luz queda amarilla («Analizando…») y la web no se bloquea.
 
-**Pendiente de probar en la placa:** repetir en la RPi 4 con la imagen (nivel 3b, `andon-core` + `andon-sensores` en modo sim, drop-in de la sección «Nivel 3b», Ollama de la imagen). Se espera ≈ 17 s por reporte, la luz amarilla «Analizando…» durante la consulta, el paro por umbral < 1 s mientras Ollama calcula y `andon.db` creado en `/var/lib/andon`. Procedimiento: copiar la app como en «Nivel 3b», `systemctl start andon-sensores andon-core` (con el drop-in sim en `andon-sensores`) y enviar los reportes con `python3 /opt/andon/enviar_reporte.py --host 127.0.0.1 "..."` (copiar `app/tools/enviar_reporte.py`).
+**En la placa:** probado el 9 nov con la imagen y el modelo real (≈ 17 s por reporte); ver la sección siguiente.
 
 ## App completa en la RPi 4 con la imagen Yocto (9 nov)
 
@@ -135,6 +154,31 @@ sh /opt/andon/modo.sh real
 | `/defensa`, Ejecutar todos | ✅ 10 de 10 en 94 s |
 
 Evidencias: `docs/evidencias/f7-placa-sin-hardware-20261109.txt`, `f7-defensa-placa-20261109.txt` y `.png`.
+
+## CU-06, CU-07 y uso manual desde la web
+
+`/defensa` y `probar_sin_hardware.py` ejercitan CU-06 (reinicio con PIN) y CU-07 (umbrales sin reiniciar)
+llamando a las APIs de la web desde código (9 nov, en la placa). La prueba **como usuario** (operario desde el
+celular, supervisor y administrador desde el navegador) está en **`docs/aceptacion.md`**, que se ejecuta en la
+laptop y en la placa con las mismas casillas.
+
+Estación completa en la laptop, sin placa (modelo real del compose o falso):
+```bash
+docker compose -f docker/compose.yaml up -d --no-deps ollama
+./scripts/simulador-pc.sh --ollama-real --lan      # sin --ollama-real usa fake_ollama
+```
+
+Cambios del 10 nov que esta prueba debe confirmar en el navegador:
+- un reporte enviado mientras el modelo carga espera y se clasifica (antes terminaba en timeout);
+- el texto no se borra si no hubo respuesta; los errores de red salen en español;
+- el resultado sobrevive a recargar la página y a un reinicio de `andon-web` (`estado.ultimo_evento`);
+- `/supervisor` verifica el reinicio («volvió a operar» o «se detuvo de nuevo») y traduce estado y causa;
+- `/defensa` solo existe en modo sim.
+
+| Ejecución | Fecha | Resultado |
+|---|---|---|
+| Laptop (`simulador-pc.sh --ollama-real --lan`) | — | ⏳ |
+| Placa (paso B3) | — | ⏳ |
 
 ## Nivel 3b · la RPi 4 con la imagen Yocto, `ANDON_MODO=sim`
 

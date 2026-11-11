@@ -1,8 +1,8 @@
 # Traspaso y guía de continuación
 
 Documento para que Eduardo, o Diego, retome el proyecto sin leer todo el historial.
-Última actualización: **9 nov 2026**, al cerrar F5 y probar la app completa en la RPi 4 con la imagen
-Yocto (rama `app/imagen-servicios`). El detalle por fase está en `docs/plan.md`; las pruebas y sus
+Última actualización: **10 nov 2026** (plan de cierre sin placa y aceptación final; ver §2). El 9 nov se
+cerró F5 y se probó la app completa en la RPi 4 con la imagen Yocto (rama `app/imagen-servicios`). El detalle por fase está en `docs/plan.md`; las pruebas y sus
 resultados, en `docs/pruebas.md`.
 
 ## 0. Qué cambió el 9 nov (leer primero)
@@ -34,25 +34,28 @@ supervisor, simulador y defensa).
 | F3 `andon-sensores` | ✅ en la placa | Lazo de 100 Hz, paro retenido, falla de sensor; reintento del MPU-6050 cada 0,5 s |
 | F4 `andon-core` | ✅ en la placa | Estados, Tabla 9, SQLite, recarga; evento con probabilidades (D16) |
 | F5 `andon-web` | ✅ en la placa | Formulario, `/tablero`, `/supervisor` (PIN), `/simulador` (D15), `/defensa` |
-| F6 empaquetado | 🟡 | Unidades y receta listas y habilitadas; **falta** Wi-Fi para la demo, `make install`, QEMU, `oeqa` |
+| F6 empaquetado | 🟡 | Unidades y receta listas y habilitadas; **falta** red para la demo y corte de corriente. QEMU recortado (D17); `make install` y `oeqa` opcionales |
 | Bloque hardware | ⏳ opcional | Cableado, calibración, OLED real, CU con sensores reales |
 
 ## 2. Por dónde seguir, en orden
 
-1. **Revisar y fusionar `app/imagen-servicios` en `app/dev`** (`--no-ff`, pruebas en verde: 339 pasan,
-   8 omitidas sin broker). Cambios en `app/` que conviene revisar con calma:
-   `core/servicio.py` (hora del navegador, D9; evento con probabilidades, D16), `hal/rpi.py` (cerrojo
-   del bus I2C, reintento del MPU-6050), `hal/sim.py` (`ajustar`, D15) y todo `web/`.
-2. **Red para la defensa (decisión pendiente).** Hoy se llega a la placa por cable y túnel SSH.
-   Para que el público o un celular abran la web: punto de acceso propio (hostapd y dnsmasq ya
-   están en la imagen; falta configurarlos) o la placa como cliente del hotspot de un celular.
-3. **Probar el arranque tras cortar la corriente** (REQ-N06): los servicios están habilitados y
-   arrancan solos al encender, pero no se probó un corte de corriente con la app en marcha.
-4. **Confirmar con el profesor** que acepta sensores simulados y la fecha de la demo.
-5. **Antes de la entrega:** quitar `debug-tweaks` de `andon.yml` (root sin contraseña), cambiar el PIN
-   `1234` en `andon.conf`, ajustar REQ-N05 en la propuesta (17 s medidos frente a la meta de 3 s).
-6. **Opcional:** `make install` (la receta ya instala sin él), QEMU y `oeqa`, recalibrar el umbral de
-   confianza (0,92) con más reportes, bloque hardware.
+Plan completo en `docs/plan.md` (F6 y «Aceptación final en la placa»). Estado al 10 nov:
+
+1. **Hecho sin placa (10 nov):** `app/imagen-servicios` fusionada; QEMU recortado (D17);
+   `simulador-pc.sh` con docker y `--ollama-real --lan`; correcciones del flujo de operador (formulario,
+   tablero, supervisor, reporte durante el calentamiento); punto de acceso en `app/deploy/red/`;
+   `yocto-requisitos.md` v2; tabla RG en `pruebas.md`; guiones `docs/aceptacion.md` y `docs/demo.md`.
+2. **Siguiente, sin placa:** ejecutar `docs/aceptacion.md` en la laptop como operador (Firefox y
+   celular), corregir lo que falle y poner la etiqueta `v0.9-sim`. Diego compila la imagen final desde
+   esa etiqueta con el punto de acceso y sin `debug-tweaks` (`yocto-requisitos.md`, v2).
+3. **Primer día con placa:** pasos B0–B7 de `docs/plan.md` en orden. Lo central es B3: el guion del
+   operador desde el celular conectado a `Andon-E1`, con el modelo real (lo que no se había probado a mano).
+4. **Confirmar con el profesor** que acepta sensores simulados y la fecha de la demo. Si quieren LEDs
+   externos: modo híbrido, diseñado en `docs/guia-hardware.md` §6 (sin implementar; requiere aprobación).
+5. **Antes de la entrega:** PIN y clave Wi-Fi cambiados en la placa (no en el repo), ajustar REQ-N05 en
+   la propuesta (17 s medidos frente a la meta de 3 s).
+6. **Opcional:** `make install`, `oeqa` contra la placa, recalibrar el umbral de confianza (0,92) con
+   más reportes (el guion anota la confianza de cada frase), bloque hardware.
 
 REQ-N05 (≤ 3 s por reporte) **no se cumple** y está reportado (D4): ≈ 17 s en la RPi 4. La mitigación
 es el flujo asíncrono (luz amarilla durante el análisis, la web no se bloquea) y el calentamiento
@@ -104,7 +107,7 @@ tiene hora fiable).
 3. Ningún resultado del modelo arranca la máquina (el core solo ordena `parar`).
 4. Si Ollama falla, agota el timeout (45 s) o la probabilidad < umbral → luz amarilla y revisión manual.
 5. 2 s sin lectura válida de un sensor → paro retenido `mpu6050_fallo` / `ds18b20_fallo` (D13).
-6. El simulador (`/simulador`, `sim/ajustar`, `sim/inyectar`) solo existe en modo sim; fuera de él la
+6. El simulador (`/simulador`, `/defensa`, `sim/ajustar`, `sim/inyectar`) solo existe en modo sim; fuera de él la
    web responde 404 y `andon-sensores` no se suscribe (D11, D15).
 7. La web no acepta umbrales que dejen el paro sin efecto: vibración ≤ 4 g (rango del MPU-6050
    configurado), temperatura ≤ 125 °C. El PIN se bloquea 30 s tras 5 intentos fallidos.
