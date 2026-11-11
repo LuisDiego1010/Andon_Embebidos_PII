@@ -3,9 +3,10 @@
 {% block contenido %}
 <section>
   <h1>Reportar lo que pasa en la máquina</h1>
+  <div id="estacion" class="aviso" hidden></div>
   <form id="form">
     <label for="texto">Descripción</label>
-    <textarea id="texto" rows="4" maxlength="{{ max_texto }}" required></textarea>
+    <textarea id="texto" rows="4" maxlength="{{ max_texto }}" placeholder="Ej.: huele a quemado cerca del motor" required></textarea>
     <div class="tenue"><span id="cuenta">0</span> / {{ max_texto }} caracteres</div>
     <button id="enviar">Enviar reporte</button>
   </form>
@@ -14,46 +15,105 @@
 {% endblock %}
 {% block script %}
 <script>
-const ESPERA_MS = 120000;
+// La consulta al modelo tarda ~17 s en la RPi 4 (D4) y ~38 s más si el modelo se está cargando.
+const ESPERA_MS = 150000;
+const PENDIENTE = "andon-reporte-pendiente";   // sobrevive a recargar la página
 const texto = $("texto"), boton = $("enviar"), res = $("resultado");
-texto.addEventListener("input", () => $("cuenta").textContent = texto.value.length);
+let estadoActual = null;
+
+const contar = () => $("cuenta").textContent = texto.value.length;
+texto.addEventListener("input", contar);
 
 function mostrar(clase, ...lineas) {
   res.hidden = false; res.className = "aviso " + clase; res.replaceChildren();
   for (const l of lineas) { const d = document.createElement("div"); d.textContent = l; res.append(d); }
 }
+function bloquear(si) { boton.disabled = si; texto.readOnly = si; }
+function leerPendiente() { try { return JSON.parse(sessionStorage.getItem(PENDIENTE)); } catch { return null; } }
+function guardarPendiente(p) { try { p ? sessionStorage.setItem(PENDIENTE, JSON.stringify(p)) : sessionStorage.removeItem(PENDIENTE); } catch {} }
+
+// --- estado de la estación, visible antes de escribir
+async function vigilar() {
+  const caja = $("estacion");
+  try {
+    const s = await api("/api/estado");
+    estadoActual = s.estado ? s.estado.estado : null;
+    const seg = s.seguridad;
+    let clase = "", msg = "";
+    if (!s.conectado) { clase = "roja"; msg = "La estación perdió la comunicación interna. Avise a su supervisor."; }
+    else if (seg && seg.activo) { clase = "roja"; msg = "Máquina en PARO DE SEGURIDAD (" + motivoParo(seg) + "). Puede enviar el reporte; un supervisor debe reiniciarla."; }
+    else if (estadoActual === "calentando") { clase = "amarilla"; msg = "La estación está cargando el modelo: el primer reporte tardará cerca de un minuto."; }
+    else if (estadoActual === "detenida") { clase = "roja"; msg = "La máquina está detenida por una falla reportada. Un supervisor debe reiniciarla."; }
+    caja.hidden = !msg; caja.className = "aviso " + clase; caja.textContent = msg;
+  } catch (e) {
+    caja.hidden = false; caja.className = "aviso roja"; caja.textContent = e.message;
+  }
+}
+
+// --- resultado
 function colorDe(e) {
   if (e.accion === "parar_maquina" || e.accion === "paro_activo" || e.accion === "maquina_detenida") return "roja";
   return e.accion === "ninguna" ? "verde" : "amarilla";
 }
 function mostrarEvento(e) {
   const lineas = [];
-  if (e.categoria) lineas.push(`${CATEGORIAS[e.categoria] || e.categoria} (confianza ${(e.prob * 100).toFixed(1)} %)`);
-  if (e.error) lineas.push("El modelo no pudo responder.");
+  if (e.categoria) lineas.push(`${CATEGORIAS[e.categoria] || e.categoria} (confianza ${pct(e.prob)})`);
+  if (e.error) lineas.push(ERRORES[e.error] || "El modelo no pudo responder.");
   lineas.push(ACCIONES[e.accion] || e.accion);
-  if (e.area) lineas.push("Área responsable: " + (AREAS[e.area] || e.area));
-  lineas.push(`Tiempo de análisis: ${(e.latencia_ms / 1000).toFixed(1)} s`);
+  if (e.accion === "revision_manual") lineas.push("La máquina sigue en marcha; un supervisor revisará el reporte.");
+  if (e.accion === "descartado") lineas.push("Su texto sigue arriba: intente de nuevo en un momento.");
+  if (e.area) lineas.push("Aviso enviado a: " + (AREAS[e.area] || e.area));
+  if (typeof e.latencia_ms === "number") lineas.push(`Tiempo de respuesta: ${num(e.latencia_ms / 1000, 1)} s`);
   mostrar(colorDe(e), ...lineas);
 }
-async function esperar(id) {
-  const limite = Date.now() + ESPERA_MS;
+
+async function esperar(p) {
+  const limite = p.t0 + ESPERA_MS;
   while (Date.now() < limite) {
+    const s = Math.round((Date.now() - p.t0) / 1000);
+    mostrar("amarilla", `Analizando… ${s} s`, estadoActual === "calentando"
+      ? "La estación está cargando el modelo; puede tardar cerca de un minuto."
+      : "Suele tardar unos 20 s. No cierre esta página.");
     await new Promise(r => setTimeout(r, 1000));
-    try { mostrarEvento(await api("/api/evento/" + id)); return; }
-    catch (e) { if (e.codigo !== 404) { /* se reintenta: fallo pasajero de red */ } }
+    try { return await api("/api/evento/" + p.id); }
+    catch (e) { /* 404 = todavía sin resultado; otro error = fallo pasajero, se reintenta */ }
   }
-  mostrar("amarilla", "No llegó respuesta a tiempo. Avise a su supervisor.");
+  return null;
 }
+
+async function seguir(p) {
+  bloquear(true);
+  const e = await esperar(p);
+  guardarPendiente(null);
+  if (e) {
+    mostrarEvento(e);
+    if (e.accion !== "descartado") { texto.value = ""; contar(); }   // ya quedó registrado
+  } else {
+    mostrar("amarilla", "No llegó respuesta a tiempo. Su texto sigue arriba; avise a su supervisor.");
+  }
+  bloquear(false);
+}
+
 $("form").addEventListener("submit", async ev => {
   ev.preventDefault();
-  boton.disabled = true;
-  mostrar("amarilla", "Analizando… puede tardar unos 20 s.");
+  bloquear(true);
   try {
     const r = await api("/api/reporte", {texto: texto.value, ts_navegador: Date.now() / 1000});
-    await esperar(r.id);
-    texto.value = ""; $("cuenta").textContent = "0";
-  } catch (e) { mostrar("roja", e.message); }
-  boton.disabled = false;
+    const p = {id: r.id, t0: Date.now(), texto: texto.value};
+    guardarPendiente(p);
+    await seguir(p);
+  } catch (e) {
+    mostrar("roja", e.message);
+    bloquear(false);
+  }
 });
+
+vigilar(); setInterval(vigilar, 3000);
+const pendiente = leerPendiente();   // se recargó la página mientras se analizaba
+if (pendiente && Date.now() - pendiente.t0 < ESPERA_MS) {
+  texto.value = pendiente.texto || ""; contar(); seguir(pendiente);
+} else {
+  guardarPendiente(null);
+}
 </script>
 {% endblock %}

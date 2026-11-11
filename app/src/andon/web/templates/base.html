@@ -29,12 +29,17 @@
 </style>
 </head>
 <body>
-<nav><strong>Estación Andon</strong><a href="/">Reporte</a><a href="/tablero">Tablero</a><a href="/supervisor">Supervisor</a>{% if modo_sim %}<a href="/simulador">Simulador</a>{% endif %}<a href="/defensa">Defensa</a></nav>
+<nav><strong>Estación Andon</strong><a href="/">Reporte</a><a href="/tablero">Tablero</a><a href="/supervisor">Supervisor</a>{% if modo_sim %}<a href="/simulador">Simulador</a><a href="/defensa">Defensa</a>{% endif %}</nav>
 <main class="{% block clase_main %}{% endblock %}">{% block contenido %}{% endblock %}</main>
 <script>
 async function api(ruta, datos) {
-  const r = await fetch(ruta, datos === undefined ? {} : {method:"POST",
-    headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+  let r;
+  try {
+    r = await fetch(ruta, datos === undefined ? {cache:"no-store"} : {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+  } catch {   // sin red: el navegador daría «Failed to fetch» en inglés
+    throw Object.assign(new Error("No hay conexión con la estación. Revise el Wi-Fi."), {codigo:0});
+  }
   const cuerpo = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(cuerpo.error || "Error de comunicación."), {codigo:r.status});
   return cuerpo;
@@ -45,6 +50,21 @@ const CATEGORIAS = {operacion_normal:"Operación normal", falla_mecanica:"Falla 
 const ACCIONES = {ninguna:"Sin acción", parar_maquina:"Máquina detenida", avisar:"Aviso enviado", revision_manual:"Revisión manual",
   paro_activo:"Paro de seguridad activo: no se actuó", maquina_detenida:"La máquina ya estaba detenida", descartado:"Descartado: estación ocupada"};
 const AREAS = {mantenimiento:"Mantenimiento", calidad:"Calidad", supervision:"Supervisión", "supervisión":"Supervisión"};
+const ESTADOS = {calentando:"Cargando el modelo…", reposo:"Operación normal", analizando:"Analizando reporte…", atencion:"Requiere atención",
+  detenida:"Máquina detenida por falla", paro_seguridad:"PARO DE SEGURIDAD"};
+const MOTIVOS = {vibracion:"vibración excesiva", temperatura:"temperatura excesiva", mpu6050_fallo:"MPU-6050 sin señal", ds18b20_fallo:"DS18B20 sin señal"};
+const ERRORES = {timeout:"El modelo tardó demasiado en responder.", conexion:"No se pudo consultar el modelo.",
+  respuesta:"El modelo devolvió una respuesta inválida.", cola_llena:"La estación está ocupada con otros reportes."};
+// Números con coma decimal, como el resto de la interfaz
+const num = (v, d) => typeof v === "number" ? v.toLocaleString("es-CR", {minimumFractionDigits:d, maximumFractionDigits:d}) : "sin dato";
+const pct = p => typeof p === "number" ? num(p * 100, 1) + " %" : "—";
+const horaDe = ts => typeof ts === "number" ? new Date(ts * 1000).toLocaleTimeString("es-CR", {hour12:false}) : "";
+function motivoParo(seg) {   // «vibración excesiva: 1,15 g (límite 1,00 g)»
+  if (!seg || !seg.activo) return "";
+  const u = {vibracion:["g", 2], temperatura:["°C", 1]}[seg.sensor] || ["s sin lectura", 1];
+  const motivo = MOTIVOS[seg.sensor] || seg.sensor;
+  return typeof seg.valor === "number" ? `${motivo}: ${num(seg.valor, u[1])} ${u[0]} (límite ${num(seg.umbral, u[1])} ${u[0]})` : motivo;
+}
 </script>
 {% block script %}{% endblock %}
 </body>

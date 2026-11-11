@@ -51,6 +51,8 @@ def crear_app(servicio):
 
     @app.get("/defensa")
     def defensa():
+        if not servicio.modo_sim:      # sus casos mueven las perillas del simulador (D15)
+            abort(404)
         return render_template("defensa.html")
 
     @app.get("/")

@@ -5,7 +5,8 @@ uno (la consulta tarda ~17 s en la RPi 4, D4), así que `on_reporte` solo encola
 mensajes (seguridad, lecturas, salidas) se siguen procesando mientras se analiza.
 
 Estados (`estado`, retenido):
-  calentando     cargando el modelo al arrancar (D4); los reportes igual se atienden
+  calentando     cargando el modelo al arrancar (D4); los reportes esperan en la cola a que
+                 termine, para no pagar la carga dentro de su propio timeout
   reposo         operación normal
   analizando     consulta en curso; luz amarilla («Analizando…»)
   atencion       el último reporte dejó luz amarilla (calidad, material o revisión manual)
@@ -35,6 +36,9 @@ CALENTANDO, REPOSO, ANALIZANDO, ATENCION, DETENIDA, PARO_SEGURIDAD = (
     "calentando", "reposo", "analizando", "atencion", "detenida", "paro_seguridad")
 MAX_TEXTO = 280
 COLA_MAX = 8
+# Un reporte que llega mientras carga el modelo espera a lo sumo esto (el calentamiento tiene
+# 120 s de timeout; en la RPi 4 tarda ~38 s). Después se consulta igual.
+ESPERA_CALENTAMIENTO_S = 130.0
 ACCION_PARO_ACTIVO = "paro_activo"       # había un paro retenido: se clasificó pero no se actuó
 ACCION_YA_DETENIDA = "maquina_detenida"  # ya estaba detenida por una falla: luz roja intacta
 ACCION_DESCARTADO = "descartado"         # cola llena
@@ -81,6 +85,8 @@ class Core:
         self._maquina_en_marcha = None
         self._paro_activo = False
         self._preparado = False
+        self._modelo_listo = threading.Event()
+        self._modelo_listo.set()      # sin calentamiento en curso
 
     # ------------------------------------------------------------------ ciclo de vida
     def preparar(self):
@@ -104,6 +110,7 @@ class Core:
         self._hilos.append(t)
         if self.cfg.ollama.calentar:
             self._cambiar(CALENTANDO)
+            self._modelo_listo.clear()
             c = threading.Thread(target=self._calentamiento, name="core-calentar", daemon=True)
             c.start()
             self._hilos.append(c)
@@ -129,12 +136,30 @@ class Core:
 
     def _calentamiento(self):
         o = self.cfg.ollama
-        segundos = self._calentar(o.url, o.modelo)
-        if segundos is None:
-            log.warning("el modelo no respondió al calentar; el primer reporte pagará la carga")
-        with self._lock:
-            if self.estado == CALENTANDO:
-                self._cambiar(PARO_SEGURIDAD if self._paro_activo else REPOSO)
+        try:
+            segundos = self._calentar(o.url, o.modelo)
+            if segundos is None:
+                log.warning("el modelo no respondió al calentar; el primer reporte pagará la carga")
+            with self._lock:
+                if self.estado == CALENTANDO:
+                    self._cambiar(PARO_SEGURIDAD if self._paro_activo else REPOSO)
+        finally:
+            self._modelo_listo.set()    # los reportes en cola ya pueden consultar
+
+    def _esperar_modelo(self):
+        """Retiene el reporte mientras se carga el modelo. False si el servicio se detiene."""
+        if self._modelo_listo.is_set():
+            return True
+        log.info("reporte en espera: el modelo se está cargando")
+        limite = self._reloj() + ESPERA_CALENTAMIENTO_S
+        while not self._modelo_listo.wait(0.5):
+            if self._fin.is_set():
+                return False
+            if self._reloj() >= limite:
+                log.warning("el calentamiento no terminó en %.0f s: se consulta igual",
+                            ESPERA_CALENTAMIENTO_S)
+                break
+        return True
 
     # ------------------------------------------------------------------ entradas MQTT
     def _on_lecturas(self, topico, d):
@@ -177,6 +202,7 @@ class Core:
         log.info("configuración recargada: umbral de confianza %.2f, modelo %s",
                  nueva.ollama.umbral_confianza, nueva.ollama.modelo)
         if cambio_modelo and nueva.ollama.calentar:
+            self._modelo_listo.clear()
             threading.Thread(target=self._calentamiento, name="core-calentar", daemon=True).start()
 
     def _on_reporte(self, topico, d):
@@ -199,7 +225,7 @@ class Core:
     def _trabajador(self):
         while not self._fin.is_set():
             item = self._cola.get()
-            if item is None:
+            if item is None or not self._esperar_modelo():
                 return
             try:
                 self.procesar(item)

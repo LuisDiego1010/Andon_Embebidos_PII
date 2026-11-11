@@ -367,6 +367,47 @@ def test_estado_calentando_mientras_carga_el_modelo():
         e.core.detener()
 
 
+def _esperar(condicion, maximo_s=3.0):
+    for _ in range(int(maximo_s / 0.01)):
+        if condicion():
+            return True
+        threading.Event().wait(0.01)
+    return False
+
+
+def test_reporte_durante_el_calentamiento_espera_al_modelo():
+    """En frío el modelo tarda ~38 s en cargar: un reporte que llega antes no debe pagar esa carga
+    dentro de su propio timeout (terminaría en revisión manual). Espera en la cola y se clasifica."""
+    e = Entorno(calentar=True)
+    liberar = threading.Event()
+    e.core._calentar = lambda url, modelo: liberar.wait(3) and 38.0
+    e.clasif.resultado = ("problema_calidad", 0.97)
+    e.core.iniciar()
+    try:
+        e.web.publicar(topicos.REPORTE, {"id": "r1", "texto": "piezas rayadas"})
+        threading.Event().wait(0.3)
+        assert e.clasif.llamadas == [] and e.core.estado == CALENTANDO
+        liberar.set()
+        assert _esperar(lambda: e.broker.ultimo(topicos.EVENTO) is not None)
+        ev = e.broker.ultimo(topicos.EVENTO)
+        assert ev["categoria"] == "problema_calidad" and ev["error"] is None
+        assert len(e.clasif.llamadas) == 1
+    finally:
+        liberar.set()
+        e.core.detener()
+
+
+def test_calentamiento_fallido_no_retiene_los_reportes():
+    e = Entorno(calentar=True)
+    e.core._calentar = lambda url, modelo: None      # Ollama no respondió al calentar
+    e.core.iniciar()
+    try:
+        e.web.publicar(topicos.REPORTE, {"id": "r1", "texto": "ruido"})
+        assert _esperar(lambda: e.broker.ultimo(topicos.EVENTO) is not None)
+    finally:
+        e.core.detener()
+
+
 def test_sin_calentar_publica_reposo_al_iniciar():
     e = Entorno(calentar=False)
     e.core.iniciar()
