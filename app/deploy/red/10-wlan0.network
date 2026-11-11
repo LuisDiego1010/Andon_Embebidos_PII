@@ -1,0 +1,17 @@
+# Dirección fija de la estación en su red Wi-Fi → /etc/systemd/network/10-wlan0.network
+# (systemd-networkd). hostapd pone wlan0 en modo punto de acceso; esto solo le da la IP.
+[Match]
+Name=wlan0
+
+[Network]
+Address=192.168.4.1/24
+# La IP debe existir aunque todavía no haya clientes asociados
+ConfigureWithoutCarrier=yes
+IgnoreCarrierLoss=yes
+# Sin DHCP ni IPv6 automático en esta interfaz: la estación es el servidor
+DHCP=no
+IPv6AcceptRA=no
+
+[Link]
+# wait-online no debe esperar a esta interfaz (H1)
+RequiredForOnline=no
