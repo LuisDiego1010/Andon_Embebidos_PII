@@ -22,7 +22,8 @@ pasan las mismas pruebas (D6, F2).
    100 Hz debe seguir deteniendo la máquina en menos de 1 s (REQ-N04). Si se retrasa, las
    soluciones son prioridad `Nice` y afinidad de núcleo para `andon-sensores`, o limitar los
    hilos de Ollama.
-4. **QEMU con Debian arm64 (nivel 3) queda como respaldo** para cuando no haya placa
+4. *(Recortado el 10 nov, ver D17: el 3b con la imagen Yocto real ya cubre lo que validaba.)*
+   **QEMU con Debian arm64 (nivel 3) queda como respaldo** para cuando no haya placa
    (fines de semana). Valida systemd e instalador; no latencia ni hardware.
 5. **`tools/fake_ollama.py` se adelanta de F6 a F4**: lo necesitan las pruebas
    deterministas del core.
