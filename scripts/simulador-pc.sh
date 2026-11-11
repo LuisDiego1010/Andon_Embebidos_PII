@@ -33,6 +33,12 @@ fi
 
 if [ "$OLLAMA_REAL" = 1 ]; then
     OLLAMA_URL="http://$ANFITRION:11434"
+    # Recién levantado, Ollama tarda unos segundos en abrir el puerto: se espera hasta 30 s.
+    for _ in $(seq 30); do
+        curl -fsS -m 3 http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+        [ "$_" = 1 ] && echo "Esperando a que Ollama responda en 127.0.0.1:11434…"
+        sleep 1
+    done
     if ! curl -fsS -m 3 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
         echo "No responde el Ollama en 127.0.0.1:11434. Levántelo con:" >&2
         echo "  docker compose -f docker/compose.yaml up -d --no-deps ollama" >&2
