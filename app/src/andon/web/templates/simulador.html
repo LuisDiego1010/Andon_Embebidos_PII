@@ -123,9 +123,6 @@
 {% endblock %}
 {% block script %}
 <script>
-const ESTADOS = {calentando:"Cargando el modelo…", reposo:"Operación normal", analizando:"Analizando reporte…", atencion:"Requiere atención",
-  detenida:"Máquina detenida por falla", paro_seguridad:"PARO DE SEGURIDAD"};
-const MOTIVOS = {vibracion:"vibración excesiva", temperatura:"temperatura excesiva", mpu6050_fallo:"MPU-6050 sin señal", ds18b20_fallo:"DS18B20 sin señal"};
 const NORMAL = {vib_g:0.1, ruido_g:0.01, temp_c:null, mpu_ok:true, ds18b20_ok:true};
 const PUNTOS = 150;
 const series = {vib:[], temp:[]};

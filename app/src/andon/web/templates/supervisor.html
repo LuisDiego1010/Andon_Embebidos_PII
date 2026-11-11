@@ -10,6 +10,10 @@
   <h2>Reiniciar la máquina</h2>
   <p class="tenue">Revise la causa de la detención antes de reiniciar. Si la falla sigue presente, la estación volverá a detenerse.</p>
   <div class="fila"><span>Estado actual</span><b id="actual">—</b></div>
+  <div class="fila"><span>Máquina</span><b id="maquina">—</b></div>
+  <div class="fila"><span>Causa del paro</span><b id="causa">—</b></div>
+  <div class="fila"><span>Lecturas</span><b id="lecturas">—</b></div>
+  <div class="fila"><span>Último reporte</span><b id="ultimo">—</b></div>
   <button id="reiniciar" class="peligro">Reiniciar</button>
   <div id="msg-reinicio" class="aviso" hidden></div>
 </section>
@@ -17,11 +21,11 @@
   <h2>Umbrales</h2>
   <form id="form">
     <label for="vib_rms_g">Vibración RMS máxima (g)</label>
-    <input id="vib_rms_g" type="number" step="any" min="0" max="4" required>
+    <input id="vib_rms_g" type="number" step="any" min="0.001" max="4" required>
     <label for="temp_c">Temperatura máxima (°C)</label>
-    <input id="temp_c" type="number" step="any" min="0" max="125" required>
+    <input id="temp_c" type="number" step="any" min="0.1" max="125" required>
     <label for="umbral_confianza">Confianza mínima del modelo (0 a 1)</label>
-    <input id="umbral_confianza" type="number" step="any" min="0" max="1" required>
+    <input id="umbral_confianza" type="number" step="any" min="0.01" max="1" required>
     <button>Guardar umbrales</button>
   </form>
   <div id="msg-umbrales" class="aviso" hidden></div>
@@ -30,22 +34,50 @@
 {% block script %}
 <script>
 const CAMPOS = ["vib_rms_g", "temp_c", "umbral_confianza"];
+const VERIFICAR_MS = 3500;   // un paro por vibración vuelve en ~1 s; uno por sensor ausente, en ~2 s (D13)
+const pausa = ms => new Promise(r => setTimeout(r, ms));
 function aviso(id, clase, texto) { const m = $(id); m.hidden = false; m.className = "aviso " + clase; m.textContent = texto; }
+
+function pintar(s) {
+  const seg = s.seguridad, sal = s.salidas || {}, ev = s.estado && s.estado.ultimo_evento;
+  $("actual").textContent = s.estado ? (ESTADOS[s.estado.estado] || s.estado.estado) : "sin dato";
+  $("maquina").textContent = sal.maquina === undefined ? "sin dato" : sal.maquina ? "En marcha" : "Detenida";
+  $("causa").textContent = seg && seg.activo ? motivoParo(seg)
+    : s.estado && s.estado.estado === "detenida" ? "falla reportada por el operario" : "ninguna";
+  const frescas = s.lecturas && s.lecturas_edad_s !== null && s.lecturas_edad_s < 5;
+  $("lecturas").textContent = frescas ? `${num(s.lecturas.vib_rms_g, 3)} g · ${num(s.lecturas.temp_c, 1)} °C` : "sin lecturas";
+  $("ultimo").textContent = ev ? `«${ev.texto}» → ${CATEGORIAS[ev.categoria] || "sin clasificar"} (${pct(ev.prob)}), ${ACCIONES[ev.accion] || ev.accion}` : "ninguno";
+}
 async function cargar(llenar) {
   try {
     const s = await api("/api/estado");
-    $("actual").textContent = s.estado ? s.estado.estado : "sin dato";
+    pintar(s);
     if (llenar) for (const c of CAMPOS) $(c).value = s.umbrales[c];
-  } catch { $("actual").textContent = "sin comunicación"; }
+    return s;
+  } catch { $("actual").textContent = "sin comunicación"; return null; }
 }
+
 $("reiniciar").addEventListener("click", async () => {
-  try { await api("/api/reiniciar", {pin: $("pin").value}); aviso("msg-reinicio", "verde", "Orden de reinicio enviada."); }
-  catch (e) { aviso("msg-reinicio", "roja", e.message); }
+  if (!confirm("¿Reiniciar la máquina? Confirme que la causa de la detención ya se corrigió.")) return;
+  const boton = $("reiniciar");
+  boton.disabled = true;
+  try {
+    await api("/api/reiniciar", {pin: $("pin").value});
+    aviso("msg-reinicio", "amarilla", "Orden enviada. Verificando que la máquina arranque…");
+    await pausa(VERIFICAR_MS);
+    const s = await cargar(false);
+    const seg = s && s.seguridad;
+    if (!s) aviso("msg-reinicio", "roja", "Orden enviada, pero no se pudo verificar el resultado (sin comunicación).");
+    else if (seg && seg.activo) aviso("msg-reinicio", "roja", `La máquina se detuvo de nuevo: ${motivoParo(seg)}. Corrija la causa antes de reiniciar.`);
+    else if (s.salidas && s.salidas.maquina) aviso("msg-reinicio", "verde", "La máquina volvió a operar.");
+    else aviso("msg-reinicio", "amarilla", "Orden enviada, pero la máquina todavía no confirma el arranque. Revise el tablero.");
+  } catch (e) { aviso("msg-reinicio", "roja", e.message); }
+  boton.disabled = false;
 });
 $("form").addEventListener("submit", async ev => {
   ev.preventDefault();
   const valores = Object.fromEntries(CAMPOS.map(c => [c, $(c).value]));
-  try { await api("/api/umbrales", {pin: $("pin").value, valores}); aviso("msg-umbrales", "verde", "Umbrales guardados y aplicados."); }
+  try { await api("/api/umbrales", {pin: $("pin").value, valores}); aviso("msg-umbrales", "verde", "Umbrales guardados. La estación los aplica en un segundo, sin reiniciar."); }
   catch (e) { aviso("msg-umbrales", "roja", e.message); }
 });
 cargar(true); setInterval(() => cargar(false), 2000);

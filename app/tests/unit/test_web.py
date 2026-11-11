@@ -36,14 +36,16 @@ def entorno(tmp_path):
 
 def test_paginas_se_sirven(entorno):
     _, _, web, _, _ = entorno
-    for ruta in ("/", "/tablero", "/supervisor", "/defensa"):
+    for ruta in ("/", "/tablero", "/supervisor"):
         assert web.get(ruta).status_code == 200
 
 
-def test_ninguna_pagina_usa_recursos_externos(entorno):
-    _, _, web, _, _ = entorno
-    for ruta in ("/", "/tablero", "/supervisor", "/defensa"):
-        assert b"https://" not in web.get(ruta).data
+def test_ninguna_pagina_usa_recursos_externos(sim):
+    """La estación no tiene Internet: nada de CDN, fuentes ni scripts de afuera."""
+    _, _, web = sim
+    for ruta in ("/", "/tablero", "/supervisor", "/simulador", "/defensa"):
+        html = web.get(ruta).data
+        assert b"http://" not in html and b"https://" not in html and b"src=\"//" not in html, ruta
 
 
 def test_reporte_se_publica_con_hora_del_navegador(entorno):
@@ -58,6 +60,13 @@ def test_reporte_de_280_pasa_y_de_281_no(entorno):
     broker, _, web, _, _ = entorno
     assert web.post("/api/reporte", json={"texto": "x" * 280}).status_code == 202
     assert web.post("/api/reporte", json={"texto": "x" * 281}).status_code == 400
+
+
+def test_reporte_con_acentos_cuenta_caracteres_no_bytes(entorno):
+    broker, _, web, _, _ = entorno
+    texto = "ñáéíóú" * 46 + "üñ"            # 278 caracteres, ~556 bytes en UTF-8
+    assert web.post("/api/reporte", json={"texto": texto}).status_code == 202
+    assert broker.ultimo(topicos.REPORTE)["texto"] == texto
     assert len(broker.de(topicos.REPORTE)) == 1
 
 
@@ -79,6 +88,17 @@ def test_evento_se_encuentra_por_id(entorno):
     assert web.get("/api/evento/abc").status_code == 404
     broker.publicar(topicos.EVENTO, {"id": "abc", "categoria": "falla_mecanica"})
     assert web.get("/api/evento/abc").get_json()["categoria"] == "falla_mecanica"
+
+
+def test_evento_perdido_se_recupera_del_estado_retenido(entorno):
+    """La web se reinició mientras el core analizaba: el `evento` no llegó, pero el `estado`
+    retenido trae el último evento y el operario igual ve su resultado."""
+    broker, _, web, _, _ = entorno
+    broker.publicar(topicos.ESTADO, {"estado": "atencion",
+                                     "ultimo_evento": {"id": "xyz", "categoria": "problema_calidad"}},
+                    retener=True)
+    assert web.get("/api/evento/xyz").get_json()["categoria"] == "problema_calidad"
+    assert web.get("/api/evento/otro").status_code == 404
 
 
 def test_estado_refleja_lo_publicado(entorno):
@@ -141,6 +161,13 @@ def test_umbrales_invalidos_no_tocan_el_archivo(entorno, valores):
     assert broker.de(topicos.CMD_RECARGAR) == []
 
 
+def test_error_de_umbral_usa_el_nombre_que_ve_el_supervisor(entorno):
+    _, _, web, _, _ = entorno
+    r = web.post("/api/umbrales", json={"pin": "1234", "valores": {"vib_rms_g": "9"}})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "Vibración RMS máxima: debe ser mayor que 0 y como máximo 4."
+
+
 def test_umbrales_requieren_pin(entorno):
     broker, _, web, ruta, _ = entorno
     antes = ruta.read_bytes()
@@ -187,15 +214,17 @@ def sim(tmp_path, monkeypatch):
 def test_simulador_no_existe_fuera_de_modo_sim(entorno):
     broker, _, web, _, _ = entorno
     assert web.get("/simulador").status_code == 404
+    assert web.get("/defensa").status_code == 404     # sus casos usan el simulador
     assert web.post("/api/sim/ajustar", json={"vib_g": 2.0}).status_code == 404
     assert broker.de(topicos.SIM_AJUSTAR) == []
-    assert b"/simulador" not in web.get("/").data
+    assert b"/simulador" not in web.get("/").data and b"/defensa" not in web.get("/").data
 
 
 def test_simulador_disponible_en_modo_sim(sim):
     _, _, web = sim
     assert web.get("/simulador").status_code == 200
-    assert b"/simulador" in web.get("/").data
+    assert web.get("/defensa").status_code == 200
+    assert b"/simulador" in web.get("/").data and b"/defensa" in web.get("/").data
 
 
 def test_ajuste_publica_el_estado_completo_retenido(sim):

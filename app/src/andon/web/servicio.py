@@ -27,13 +27,13 @@ MAX_FALLOS_PIN = 5
 BLOQUEO_PIN_S = 30.0
 PIN_OK, PIN_MAL, PIN_BLOQUEADO = "ok", "mal", "bloqueado"
 
-# campo del formulario → (sección, clave, máximo). Los máximos evitan que un error de dedo
-# deje el lazo de seguridad sin efecto: el MPU-6050 se configura a ±4 g (hal/rpi.py) y el
-# DS18B20 llega a 125 °C; un umbral por encima de eso nunca dispararía el paro.
+# campo del formulario → (sección, clave, máximo, nombre para el usuario). Los máximos evitan
+# que un error de dedo deje el lazo de seguridad sin efecto: el MPU-6050 se configura a ±4 g
+# (hal/rpi.py) y el DS18B20 llega a 125 °C; un umbral por encima de eso nunca dispararía el paro.
 UMBRALES = {
-    "vib_rms_g": ("umbrales", "vib_rms_g", 4.0),
-    "temp_c": ("umbrales", "temp_c", 125.0),
-    "umbral_confianza": ("ollama", "umbral_confianza", 1.0),
+    "vib_rms_g": ("umbrales", "vib_rms_g", 4.0, "Vibración RMS máxima"),
+    "temp_c": ("umbrales", "temp_c", 125.0, "Temperatura máxima"),
+    "umbral_confianza": ("ollama", "umbral_confianza", 1.0, "Confianza mínima del modelo"),
 }
 
 
@@ -139,8 +139,15 @@ class ServicioWeb:
                                  "umbral_confianza": c.ollama.umbral_confianza}}
 
     def evento(self, reporte_id):
+        """Evento de un reporte. Si la web se reinició o perdió el mensaje mientras el core
+        analizaba, lo recupera de `estado.ultimo_evento` (retenido)."""
         with self._lock:
-            return next((e for e in self._eventos if e.get("id") == reporte_id), None)
+            evento = next((e for e in self._eventos if e.get("id") == reporte_id), None)
+            if evento is None and isinstance(self._estado, dict):
+                ultimo = self._estado.get("ultimo_evento")
+                if isinstance(ultimo, dict) and ultimo.get("id") == reporte_id:
+                    evento = ultimo
+            return evento
 
     # ------------------------------------------------------------------ acciones
     def enviar_reporte(self, texto, ts_navegador):
@@ -187,13 +194,13 @@ class ServicioWeb:
         for campo, texto in valores.items():
             if campo not in UMBRALES:
                 raise ErrorConfig(f"campo desconocido: {campo}")
-            seccion, clave, maximo = UMBRALES[campo]
+            seccion, clave, maximo, nombre = UMBRALES[campo]
             try:
                 numero = float(texto)
             except (TypeError, ValueError):
-                raise ErrorConfig(f"{campo}: no es un número") from None
+                raise ErrorConfig(f"{nombre}: no es un número.") from None
             if not math.isfinite(numero) or not 0 < numero <= maximo:
-                raise ErrorConfig(f"{campo}: debe estar entre 0 y {maximo:g}")
+                raise ErrorConfig(f"{nombre}: debe ser mayor que 0 y como máximo {maximo:g}.")
             cambios[seccion, clave] = repr(numero)
         if not cambios:
             raise ErrorConfig("no hay valores que guardar")

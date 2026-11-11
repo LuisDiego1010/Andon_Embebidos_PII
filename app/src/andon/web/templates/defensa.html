@@ -69,8 +69,6 @@
 {% block script %}
 <script>
 const NORMAL = {vib_g:0.1, ruido_g:0.01, temp_c:null, mpu_ok:true, ds18b20_ok:true};
-const ESTADOS = {calentando:"Cargando el modelo", reposo:"Operación normal", analizando:"Analizando reporte", atencion:"Requiere atención",
-  detenida:"Detenida por falla", paro_seguridad:"Paro de seguridad"};
 const ESPERA_MODELO_MS = 120000;
 let ultimo = null;
 
@@ -104,7 +102,7 @@ async function reportar(texto) {
   }
   throw new Error("el modelo no respondió a tiempo");
 }
-const pct = p => p == null ? "—" : (p * 100).toFixed(1) + " %";
+
 const desc = e => `${CATEGORIAS[e.categoria] || "sin clasificar"} (${pct(e.prob)}) → ${ACCIONES[e.accion] || e.accion}, ${(e.latencia_ms / 1000).toFixed(1)} s`;
 function verificar(condiciones) {      // [[cumple, texto si falla], ...]
   const fallas = condiciones.filter(c => !c[0]).map(c => c[1]);
