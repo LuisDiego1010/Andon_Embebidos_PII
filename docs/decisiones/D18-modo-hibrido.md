@@ -25,6 +25,13 @@ Ver `docs/guia-hardware.md` §6. Con la placa apagada; los LEDs con 330 Ω; la O
 El MOSFET y el ventilador (GPIO 17) son opcionales: si se conectan, el ventilador arranca y se detiene
 con la máquina, pero no influye en la vibración simulada.
 
+## Addendum (12 nov): pantalla LCD 16x2
+La pantalla disponible resultó ser una LCD de caracteres 16x2 (HD44780) con adaptador I2C PCF8574 en 0x27, no
+una OLED SSD1306. Se agregó `hal/lcd1602.py` y la opción `[i2c] pantalla = ssd1306 | lcd1602` (la dirección sigue
+en `oled`). Las líneas que la estación manda para la OLED se acomodan en 2 filas de 16; sin tildes. El hilo de la
+pantalla es el mismo de la OLED: si no responde, se registra y el lazo de seguridad no se entera. El contrato
+MQTT no cambia. `andon.conf` de la imagen queda con `pantalla = lcd1602` y `oled = 0x27`.
+
 ## Consecuencias
 - En la defensa hay que decirlo claro: **los sensores son simulados; las salidas son reales.**
 - El paro < 1 s (REQ-N04) se mide desde la lectura simulada que cruza el umbral hasta el LED rojo real.

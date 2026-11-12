@@ -18,6 +18,7 @@ import threading
 import time
 
 from andon.hal.base import HAL, ErrorHardware
+from andon.hal.lcd1602 import Lcd1602
 from andon.hal.ssd1306 import Ssd1306
 
 log = logging.getLogger(__name__)
@@ -55,6 +56,10 @@ class _BusCompartido:
         with self._cerrojo:
             self._bus.write_i2c_block_data(direccion, registro, datos)
 
+    def write_byte(self, direccion, valor):
+        with self._cerrojo:
+            self._bus.write_byte(direccion, valor)
+
 
 def _con_signo(alto, bajo):
     v = (alto << 8) | bajo
@@ -87,7 +92,8 @@ class HalRpi(HAL):
         except (ImportError, OSError) as e:
             self._liberar()
             raise ErrorHardware(f"no se pudo abrir el hardware: {e}") from e
-        self._oled = Ssd1306(_BusCompartido(self._bus, self._lock_i2c), cfg.i2c.oled)
+        pantalla = Lcd1602 if cfg.i2c.pantalla == "lcd1602" else Ssd1306
+        self._oled = pantalla(_BusCompartido(self._bus, self._lock_i2c), cfg.i2c.oled)
         self._oled_hilo = threading.Thread(target=self._bucle_oled, name="hal-oled", daemon=True)
         self._oled_hilo.start()
 
@@ -147,7 +153,7 @@ class HalRpi(HAL):
             except OSError as e:
                 self._oled.invalidar()
                 if not self._oled_fallando:
-                    log.warning("OLED en 0x%02x no responde: %s", self._cfg.i2c.oled, e)
+                    log.warning("pantalla %s en 0x%02x no responde: %s", self._cfg.i2c.pantalla, self._cfg.i2c.oled, e)
                 self._oled_fallando = True
 
     def _liberar(self):

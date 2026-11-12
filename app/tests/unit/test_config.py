@@ -24,7 +24,7 @@ def test_conf_de_la_placa_es_valido():
     c = cargar(str(CONF_PLACA), entorno={})
     assert c.modo == "rpi"
     assert (c.gpio.maquina, c.gpio.verde, c.gpio.amarilla, c.gpio.roja, c.gpio.zumbador) == (17, 22, 27, 23, 24)
-    assert c.i2c.mpu == 0x68 and c.i2c.oled == 0x3C
+    assert c.i2c.mpu == 0x68 and (c.i2c.pantalla, c.i2c.oled) == ("lcd1602", 0x27)   # D18
     assert c.ollama.umbral_confianza == 0.92 and c.ollama.calentar is True
 
 

@@ -55,20 +55,23 @@ La demo se hace sin MPU-6050 ni DS18B20. `modo = hibrido` toma las entradas de `
 
 ```bash
 sh /opt/andon/modo.sh hibrido     # volver: modo.sh sim o modo.sh real
-i2cdetect -y 1                    # esperado: 3c (OLED). El 68 no aparece: no hay MPU-6050
+i2cdetect -y 1                    # esperado: 27 (LCD) o 3c (OLED). El 68 no aparece: no hay MPU-6050
 ```
 Después, en `http://<placa>:5000/simulador`: subir la vibración por encima del umbral → LED rojo y
 zumbador reales; reiniciar con PIN en `/supervisor` → LED verde. `/defensa` corre igual que en sim.
 
-**Cableado mínimo para la torre** (placa apagada; reglas de §1):
+**Rieles de la protoboard:** + de arriba a 3,3 V (pin 1), solo para la pantalla; + de abajo a 5 V (pin 2),
+solo para el zumbador; los dos − unidos a GND (pin 6).
+
+**Cableado de la demo** (placa apagada; reglas de §1). Verificado el 12 nov:
 
 | Salida | GPIO (BCM) | Conexión |
 |---|---|---|
 | LED verde | 22 | GPIO → resistencia 330 Ω → LED → GND |
 | LED amarillo | 27 | igual |
 | LED rojo | 23 | igual |
-| Zumbador | 24 | zumbador activo de 3,3 V, o a través de un transistor si es de 5 V |
-| OLED SSD1306 | SDA 2 (pin 3), SCL 3 (pin 5) | VCC a **3,3 V** (pin 1), GND; dirección 0x3C |
+| Zumbador | 24 | GPIO → 1 kΩ → base del 2N2222; emisor a GND; colector al (−) del zumbador; (+) al riel de **5 V** (pin 2) |
+| Pantalla | SDA 2 (pin 3), SCL 3 (pin 5) | VCC al riel de **3,3 V** (pin 1), GND. LCD 16x2 con PCF8574 en 0x27 (`pantalla = lcd1602`) u OLED SSD1306 en 0x3C (`pantalla = ssd1306`) |
 
 Con 330 Ω y 3,3 V, cada LED toma ≈ 4 mA, dentro de lo que soporta un GPIO. El MOSFET y el ventilador
 (GPIO 17) se pueden dejar desconectados: la salida «máquina» se ve igual en el tablero.

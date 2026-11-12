@@ -101,3 +101,45 @@ def test_crear_hal_y_config(tmp_path):
 def test_modo_invalido_sigue_rechazado(tmp_path):
     with pytest.raises(ErrorConfig):
         cargar(ruta=str(tmp_path / "x.conf"), entorno={"ANDON_MODO": "mixto"})
+
+
+def test_lcd1602_desde_la_configuracion(gp):
+    from andon.common.config import I2c
+    bus = FakeSMBus()
+    h = HalHibrido(Config(i2c=I2c(oled=0x27, pantalla="lcd1602")), sim=HalSim(reloj=Reloj()),
+                   gpiod_mod=gp, smbus_mod=FakeSmbusModulo(bus))
+    h.mostrar_oled(["OPERANDO", "Todo normal"])
+    limite = time.monotonic() + 2
+    while not bus.bytes and time.monotonic() < limite:
+        time.sleep(0.01)
+    h.cerrar()
+    assert bus.bytes and all(addr == 0x27 for addr, _ in bus.bytes) and bus.bloques == []
+
+
+def test_pantalla_que_no_responde_no_afecta_las_salidas(gp):
+    from andon.common.config import I2c
+    bus = FakeSMBus()
+    bus.falla_oled = True
+    h = HalHibrido(Config(i2c=I2c(oled=0x27, pantalla="lcd1602")), sim=HalSim(reloj=Reloj()),
+                   gpiod_mod=gp, smbus_mod=FakeSmbusModulo(bus))
+    for i in range(20):
+        h.mostrar_oled([f"PARO {i}"])
+        h.set_luz("roja" if i % 2 else "verde")
+    h.set_luz("roja")
+    assert gp.lineas.activos() == {23}
+    h.cerrar()
+
+
+@pytest.mark.parametrize("texto", ["[i2c]\npantalla = lcd2004\n", "[i2c]\noled = 0x99\n"])
+def test_pantalla_invalida_se_rechaza(tmp_path, texto):
+    r = tmp_path / "a.conf"
+    r.write_text(texto)
+    with pytest.raises(ErrorConfig):
+        cargar(ruta=str(r), entorno={})
+
+
+def test_pantalla_lcd_desde_el_archivo(tmp_path):
+    r = tmp_path / "a.conf"
+    r.write_text("[i2c]\npantalla = lcd1602\noled = 0x27\n")
+    c = cargar(ruta=str(r), entorno={})
+    assert c.i2c.pantalla == "lcd1602" and c.i2c.oled == 0x27
