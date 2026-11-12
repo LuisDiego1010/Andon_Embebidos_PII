@@ -81,6 +81,8 @@ Cualquier cambio a este contrato se consulta primero y se refleja aquí y en
 
 ## Modo simulado
 - `ANDON_MODO=sim` cambia `hal/rpi.py` por `hal/sim.py`.
+- `ANDON_MODO=hibrido` (D18): sensores de `hal/sim.py` (panel `/simulador`) y salidas reales
+  (LEDs, zumbador, OLED) de `hal/rpi.py`. `sim/*`, `/simulador` y `/defensa` existen en sim e hibrido.
 - La simulación genera muestras crudas de aceleración a 100 Hz (no el RMS ya
   calculado), para que el cálculo y los umbrales sean el mismo código que en la placa.
 - En modo sim, las salidas (luces, zumbador, OLED) se publican en `salidas` y `/tablero`

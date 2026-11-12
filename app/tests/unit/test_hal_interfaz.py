@@ -3,16 +3,19 @@ import pytest
 
 from andon.common.config import Config
 from andon.hal.base import OLED_COLUMNAS, OLED_LINEAS, ErrorHardware, Salidas
+from andon.hal.hibrido import HalHibrido
 from andon.hal.rpi import HalRpi
 from andon.hal.sim import HalSim
 
 from .dobles_hw import FakeGpiod, FakeSMBus, FakeSmbusModulo, crear_w1
 
 
-@pytest.fixture(params=["sim", "rpi"])
+@pytest.fixture(params=["sim", "rpi", "hibrido"])
 def hal(request, tmp_path):
     if request.param == "sim":
         h = HalSim()
+    elif request.param == "hibrido":
+        h = HalHibrido(Config(), gpiod_mod=FakeGpiod(), smbus_mod=FakeSmbusModulo(FakeSMBus()))
     else:
         crear_w1(tmp_path)
         h = HalRpi(Config(), gpiod_mod=FakeGpiod(),

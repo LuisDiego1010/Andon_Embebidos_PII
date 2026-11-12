@@ -1,16 +1,17 @@
 #!/bin/sh
 # Cambia la estación entre sensores simulados y reales. Correr como root en la placa.
 #   sh /opt/andon/modo.sh sim      activa el panel http://<placa>:5000/simulador
+#   sh /opt/andon/modo.sh hibrido  panel para los sensores; LEDs, zumbador y OLED reales (D18)
 #   sh /opt/andon/modo.sh real     vuelve al hardware real
 # Reinicia servicios y borra el paro retenido guardado.
 set -e
-case "$1" in sim|real) ;; *) echo "uso: $0 sim|real" >&2; exit 2 ;; esac
+case "$1" in sim|hibrido|real) ;; *) echo "uso: $0 sim|hibrido|real" >&2; exit 2 ;; esac
 
 for s in andon-sensores andon-web; do
     d=/etc/systemd/system/$s.service.d
-    if [ "$1" = sim ]; then
+    if [ "$1" != real ]; then
         mkdir -p "$d"
-        printf '[Service]\nEnvironment=ANDON_MODO=sim\n' > "$d/sim.conf"
+        printf '[Service]\nEnvironment=ANDON_MODO=%s\n' "$1" > "$d/sim.conf"
     else
         rm -f "$d/sim.conf"
     fi

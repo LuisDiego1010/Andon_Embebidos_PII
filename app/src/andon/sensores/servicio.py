@@ -64,7 +64,7 @@ class Sensores:
         self.mqtt.suscribir(topicos.CMD_MAQUINA, self._on_maquina)
         self.mqtt.suscribir(topicos.CMD_SENAL, self._on_senal)
         self.mqtt.suscribir(topicos.CMD_RECARGAR, self._on_recargar)
-        if self.cfg.modo == "sim":      # sim/inyectar no existe fuera del modo sim (D11)
+        if self.cfg.entradas_simuladas:   # sim/* no existe con sensores reales (D11, D18)
             self.mqtt.suscribir(topicos.SIM_INYECTAR, self._on_inyectar)
             self.mqtt.suscribir(topicos.SIM_AJUSTAR, self._on_ajustar)
         self.mqtt.al_conectar(self._republicar)
@@ -277,7 +277,7 @@ class Sensores:
                  nueva.umbrales.vib_rms_g, nueva.umbrales.temp_c)
 
     def _on_inyectar(self, topico, d):
-        if self.cfg.modo != "sim" or not hasattr(self.hal, "inyectar"):
+        if not self.cfg.entradas_simuladas or not hasattr(self.hal, "inyectar"):
             log.warning("sim/inyectar ignorado: no es modo sim")
             return
         vib, temp, dur = d.get("vib_g"), d.get("temp_c"), d.get("duracion_s", 5.0)
@@ -291,7 +291,7 @@ class Sensores:
 
     def _on_ajustar(self, topico, d):
         """Controles del panel /simulador (D15). Solo existe en modo sim."""
-        if self.cfg.modo != "sim" or not hasattr(self.hal, "ajustar"):
+        if not self.cfg.entradas_simuladas or not hasattr(self.hal, "ajustar"):
             log.warning("sim/ajustar ignorado: no es modo sim")
             return
         try:

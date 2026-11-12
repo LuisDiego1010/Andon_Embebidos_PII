@@ -6,5 +6,8 @@ def crear_hal(cfg):
     if cfg.modo == "sim":
         from andon.hal.sim import HalSim
         return HalSim()
+    if cfg.modo == "hibrido":
+        from andon.hal.hibrido import HalHibrido
+        return HalHibrido(cfg)
     from andon.hal.rpi import HalRpi
     return HalRpi(cfg)

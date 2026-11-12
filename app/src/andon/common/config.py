@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass, field, replace
 
 RUTA_POR_DEFECTO = "/etc/andon/andon.conf"
-MODOS = ("sim", "rpi")
+MODOS = ("sim", "hibrido", "rpi")  # hibrido: sensores simulados, salidas reales (D18)
 
 
 class ErrorConfig(ValueError):
@@ -78,6 +78,11 @@ class Config:
     sensores: SensoresCfg = field(default_factory=SensoresCfg)
     gpio: Gpio = field(default_factory=Gpio)
     i2c: I2c = field(default_factory=I2c)
+
+    @property
+    def entradas_simuladas(self):
+        """Sensores del panel /simulador (sim y hibrido): habilita sim/inyectar y sim/ajustar."""
+        return self.modo in ("sim", "hibrido")
     web: Web = field(default_factory=Web)
 
 

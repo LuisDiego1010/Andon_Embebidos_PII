@@ -48,20 +48,17 @@ La vibración con falla tiene que superar claramente el umbral propuesto. Cargar
 La OLED nunca se probó en una pantalla real: si no se ve, revisar con `i2cdetect` y mirar el
 registro `OLED ... no responde`. Una OLED dañada no afecta al paro.
 
-## 6. Ampliación: LEDs externos con sensores simulados (diseño, no implementado)
+## 6. Modo híbrido: LEDs, zumbador y OLED reales con sensores simulados (D18, implementado)
 
-La demo se hace con sensores simulados (decisión del 9 nov). Si el equipo quiere mostrar **la torre de luces
-y el zumbador físicos** sin tener aún los sensores, hace falta un modo que hoy no existe: **entradas
-simuladas y salidas reales**. `modo = sim` reemplaza toda la capa de hardware (`hal/sim.py`) y `modo = rpi`
-exige los sensores (sin ellos, paro a los 2 s por D13).
+La demo se hace sin MPU-6050 ni DS18B20. `modo = hibrido` toma las entradas de `HalSim` (panel
+`/simulador`) y manda las salidas a `HalRpi` (libgpiod e I2C, mismos pines de `docs/hardware.md`).
 
-**Diseño propuesto** (para implementar solo si se aprueba: es un cambio de arquitectura menor):
-- `modo = hibrido`: una clase `HalHibrido` que toma las entradas de `HalSim` (`leer_acel`, `leer_temp`,
-  `ajustar`, panel `/simulador`) y delega las salidas (`_escribir_luz`, `_escribir_zumbador`,
-  `_escribir_maquina`, `_escribir_oled`) en `HalRpi` (libgpiod, mismo mapa de pines de `docs/hardware.md`).
-- Se activa igual que el modo sim: con un *drop-in* de prueba (`modo.sh hibrido`), nunca en la receta (D11).
-- `andon-sensores` y la web lo tratan como modo sim: `/simulador`, `sim/ajustar` y `/defensa` disponibles.
-- Pruebas: las mismas de `test_hal_interfaz.py` con dobles de `gpiod`.
+```bash
+sh /opt/andon/modo.sh hibrido     # volver: modo.sh sim o modo.sh real
+i2cdetect -y 1                    # esperado: 3c (OLED). El 68 no aparece: no hay MPU-6050
+```
+Después, en `http://<placa>:5000/simulador`: subir la vibración por encima del umbral → LED rojo y
+zumbador reales; reiniciar con PIN en `/supervisor` → LED verde. `/defensa` corre igual que en sim.
 
 **Cableado mínimo para la torre** (placa apagada; reglas de §1):
 
@@ -71,9 +68,10 @@ exige los sensores (sin ellos, paro a los 2 s por D13).
 | LED amarillo | 27 | igual |
 | LED rojo | 23 | igual |
 | Zumbador | 24 | zumbador activo de 3,3 V, o a través de un transistor si es de 5 V |
+| OLED SSD1306 | SDA 2 (pin 3), SCL 3 (pin 5) | VCC a **3,3 V** (pin 1), GND; dirección 0x3C |
 
 Con 330 Ω y 3,3 V, cada LED toma ≈ 4 mA, dentro de lo que soporta un GPIO. El MOSFET y el ventilador
 (GPIO 17) se pueden dejar desconectados: la salida «máquina» se ve igual en el tablero.
 
-**Limitación:** en modo híbrido el ventilador real (si se conecta) no influye en la vibración simulada. Sirve
+**Limitación:** el ventilador real (si se conecta) no influye en la vibración simulada. Sirve
 para mostrar las salidas, no para validar el paro sobre sensores reales (eso sigue en §5).

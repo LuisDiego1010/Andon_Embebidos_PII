@@ -84,7 +84,7 @@ class ServicioWeb:
 
     @property
     def modo_sim(self):
-        return self.cfg.modo == "sim"
+        return self.cfg.entradas_simuladas   # sim o hibrido: sensores del panel
 
     def preparar(self):
         m = self.mqtt
