@@ -197,14 +197,14 @@ cada una con su etiqueta `v1.0-rcN`.
 
 **Aceptación final en la placa (10 nov: orden acordado para el primer día con placa):**
 - [ ] B0 Imagen de `v0.9-sim`; PIN y clave Wi-Fi cambiados en la placa; `verificar-imagen.sh`
-- [ ] B1 `probar_sin_hardware.py` 70/70 con evidencia
-- [ ] B2 Celular en `Andon-E1` abre `http://192.168.4.1:5000`
-- [ ] B3 `docs/aceptacion.md` completo desde el celular con el modelo real
-- [ ] B4 `/defensa` 10/10 y CSV
-- [ ] B5 Corte de corriente con paro retenido y con un reporte en análisis; `andon.db` íntegra
-- [ ] B6 Sin Internet: solo el punto de acceso, sin conexiones salientes (REQ-N01)
+- [x] B1 `probar_sin_hardware.py` 70/70 con evidencia (12 nov, `evidencias/b1-placa-sin-hardware-20261112.txt`)
+- [x] B2 Celular en `Andon-E1` abre `http://192.168.4.1:5000` (12 nov: el celular recibió 192.168.4.14)
+- [x] B3 `docs/aceptacion.md` completo con el modelo real: 31 ✅ · 0 ❌ · 2 ⚠️ (12 nov, Playwright por túnel SSH)
+- [x] B4 `/defensa` 10/10 y CSV (12 nov, `evidencias/b4-defensa-placa-20261112.*`)
+- [x] B5 Corte de corriente con paro retenido y con un reporte en análisis; `andon.db` íntegra (12 nov, `evidencias/b5-corte-corriente-20261112.md`)
+- [x] B6 Sin Internet: sin ruta por defecto ni conexiones salientes (12 nov, `evidencias/b6-sin-internet-20261112.md`; rpcbind sobra)
 - [ ] B7 Ensayo cronometrado de `docs/demo.md`
-- [ ] B8 *Opcional:* LEDs externos (modo híbrido, `docs/guia-hardware.md` §6, requiere aprobación)
+- [x] B8 LEDs, zumbador y LCD reales en modo híbrido (D18): secuencia de demo correcta en la placa (12 nov, `evidencias/b8-hibrido-placa-20261112.txt`)
 
 Tareas anteriores (antes de la decisión del 9 nov de demo simulada):
 

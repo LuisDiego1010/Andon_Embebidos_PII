@@ -52,54 +52,54 @@ con la misma confianza. Anotar siempre la categoría y la confianza obtenidas.
 
 | # | Acción | Esperado | Laptop | Placa |
 |---|---|---|---|---|
-| O1 | Abrir la página recién arrancada la estación | Aviso amarillo «cargando el modelo» mientras dura el calentamiento; desaparece solo |⚠️ no lo ví. asumo a que cargó rapido | |
-| O2 | Durante O1, enviar «Huele a quemado cerca del motor». En la laptop el calentamiento dura ~10 s: enviarlo apenas arranque; en la placa dura ~38 s | Contador «Analizando… N s» con el aviso de carga. Tarda más, pero **se clasifica**: no termina en «El modelo tardó demasiado» | ✅| |
-| O3 | CU-01: con todo normal, «La máquina funciona bien, sin novedades» | Verde o amarilla con revisión manual; la máquina sigue. Anotar categoría y % | ✅ Verde: Operación normal (100%) Sin acción Tiempo de respuesta: 4,2 s| |
-| O4 | CU-03: «Huele a quemado y salió una chispa del cable de alimentación». En la laptop se probó «olor a quemado cerca del motor» (propuesta) | Falla eléctrica → **Máquina detenida**, aviso a Mantenimiento, luz roja en el tablero. Anotar % y tiempo | ✅ Confianza 70,1 %. Luz amarilla. Tiempo 4 s| |
-| O5 | CU-03 con frase propia (p. ej. «salen chispas del cable») | Igual que O4. Anotar resultado | Falla eléctrica (45%), revisión manual, supervisor revisará, amarillo, 4 s| |
-| O6 | CU-04: «Las piezas salen con rebaba y fuera de medida» y una frase propia de calidad. En la laptop se probó «las piezas salen con rebaba» (propuesta) | Calidad → luz amarilla, aviso a Calidad, la máquina sigue. Anotar % de cada una | Falla mecánica (58, 3%), revisión manual, máquina en marcha con revisión de supervisor, 4 s| |
-| O7 | Material faltante: «se acabaron los tornillos en la línea» | Amarilla, aviso a Supervisión, la máquina sigue | ✅| |
-| O8 | CU-05: «algo raro pasa, no sé qué es» | Revisión manual y «La máquina sigue en marcha; un supervisor revisará el reporte» |✅ | |
-| O9 | Enviar un reporte y **recargar la página** mientras dice «Analizando…» | Tras recargar vuelve a «Analizando…» con el mismo texto y muestra el resultado al final | ✅| |
-| O10 | Enviar un reporte y **apagar el Wi-Fi del celular** antes de que responda; reactivarlo a los 10 s | Mientras no hay red, sigue esperando. Al volver, muestra el resultado. Ningún mensaje en inglés | ✅| |
-| O11 | Con el Wi-Fi apagado, pulsar «Enviar reporte» | «No hay conexión con la estación. Revise el Wi-Fi.»; el texto **no se borra** | ✅| |
-| O12 | Escribir 280 caracteres con tildes y ñ | El contador llega a 280, no deja escribir más y el reporte se acepta | ✅ envié emojis al azar y los aceptó: operación normal (confianza 50%)| |
-| O13 | Texto con un emoji (p. ej. «la banda hace ruido 🔧») | Se acepta. El contador puede marcar 2 por emoji: es esperado |✅ | |
-| O14 | Solo espacios | «Escriba qué está pasando.» | ✅| |
-| O15 | Con paro de seguridad activo (ver S1), abrir «Reporte» | Aviso rojo con el motivo («vibración excesiva: …»). El reporte se puede enviar y responde «Paro de seguridad activo: no se actuó» | ✅| |
-| O16 | Enviar 3 reportes seguidos desde 2 dispositivos | Todos reciben resultado, en orden. Ninguno se pierde | ✅| |
-| O17 | Legibilidad en el celular | Sin desplazamiento horizontal; botones fáciles de pulsar; porcentajes con coma decimal |✅ | |
+| O1 | Abrir la página recién arrancada la estación | Aviso amarillo «cargando el modelo» mientras dura el calentamiento; desaparece solo |⚠️ no lo ví. asumo a que cargó rapido | ✅ aviso visible |
+| O2 | Durante O1, enviar «Huele a quemado cerca del motor». En la laptop el calentamiento dura ~10 s: enviarlo apenas arranque; en la placa dura ~38 s | Contador «Analizando… N s» con el aviso de carga. Tarda más, pero **se clasifica**: no termina en «El modelo tardó demasiado» | ✅| ✅ 50,2 %, revisión manual en 37,6 s |
+| O3 | CU-01: con todo normal, «La máquina funciona bien, sin novedades» | Verde o amarilla con revisión manual; la máquina sigue. Anotar categoría y % | ✅ Verde: Operación normal (100%) Sin acción Tiempo de respuesta: 4,2 s| ✅ Operación normal 100 % |
+| O4 | CU-03: «Huele a quemado y salió una chispa del cable de alimentación». En la laptop se probó «olor a quemado cerca del motor» (propuesta) | Falla eléctrica → **Máquina detenida**, aviso a Mantenimiento, luz roja en el tablero. Anotar % y tiempo | ✅ Confianza 70,1 %. Luz amarilla. Tiempo 4 s| ✅ Falla eléctrica 98,7 %, detenida, 17,2 s |
+| O5 | CU-03 con frase propia (p. ej. «salen chispas del cable») | Igual que O4. Anotar resultado | Falla eléctrica (45%), revisión manual, supervisor revisará, amarillo, 4 s| ⚠️ 50–51,5 %, revisión manual |
+| O6 | CU-04: «Las piezas salen con rebaba y fuera de medida» y una frase propia de calidad. En la laptop se probó «las piezas salen con rebaba» (propuesta) | Calidad → luz amarilla, aviso a Calidad, la máquina sigue. Anotar % de cada una | Falla mecánica (58, 3%), revisión manual, máquina en marcha con revisión de supervisor, 4 s| ✅ 99,7 % y 99,9 %, aviso a Calidad |
+| O7 | Material faltante: «se acabaron los tornillos en la línea» | Amarilla, aviso a Supervisión, la máquina sigue | ✅| ⚠️ 89–91,5 %, bajo 0,92: revisión manual |
+| O8 | CU-05: «algo raro pasa, no sé qué es» | Revisión manual y «La máquina sigue en marcha; un supervisor revisará el reporte» |✅ | ✅ 67–69 %, revisión manual |
+| O9 | Enviar un reporte y **recargar la página** mientras dice «Analizando…» | Tras recargar vuelve a «Analizando…» con el mismo texto y muestra el resultado al final | ✅| ✅ |
+| O10 | Enviar un reporte y **apagar el Wi-Fi del celular** antes de que responda; reactivarlo a los 10 s | Mientras no hay red, sigue esperando. Al volver, muestra el resultado. Ningún mensaje en inglés | ✅| ✅ |
+| O11 | Con el Wi-Fi apagado, pulsar «Enviar reporte» | «No hay conexión con la estación. Revise el Wi-Fi.»; el texto **no se borra** | ✅| ✅ |
+| O12 | Escribir 280 caracteres con tildes y ñ | El contador llega a 280, no deja escribir más y el reporte se acepta | ✅ envié emojis al azar y los aceptó: operación normal (confianza 50%)| ✅ 280, aceptado |
+| O13 | Texto con un emoji (p. ej. «la banda hace ruido 🔧») | Se acepta. El contador puede marcar 2 por emoji: es esperado |✅ | ✅ |
+| O14 | Solo espacios | «Escriba qué está pasando.» | ✅| ✅ |
+| O15 | Con paro de seguridad activo (ver S1), abrir «Reporte» | Aviso rojo con el motivo («vibración excesiva: …»). El reporte se puede enviar y responde «Paro de seguridad activo: no se actuó» | ✅| ✅ |
+| O16 | Enviar 3 reportes seguidos desde 2 dispositivos | Todos reciben resultado, en orden. Ninguno se pierde | ✅| ✅ en orden (cola) |
+| O17 | Legibilidad en el celular | Sin desplazamiento horizontal; botones fáciles de pulsar; porcentajes con coma decimal |✅ | ✅ 390 px |
 
 ## 2. Sistema (panel `/simulador`, hace de máquina y sensores)
 
 | # | Acción | Esperado | Laptop | Placa |
 |---|---|---|---|---|
-| S1 | CU-02: botón «Aspa desbalanceada» (2 g) | Paro en < 1 s: luz roja, zumbador. El tablero dice «PARO DE SEGURIDAD: vibración excesiva: 1,15 g (límite 1,00 g)». El valor es el primero que cruzó el límite, por eso es menor que 2 | ✅| |
-| S2 | Volver la vibración a 0,1 g | **El paro sigue retenido** (rojo) hasta que lo libere el supervisor |✅ | |
-| S3 | «Sobrecalentamiento» (85 °C) | Paro por temperatura con su motivo en °C | ✅| |
-| S4 | «Desconectar MPU-6050» | Paro a los ~2 s: «MPU-6050 sin señal» |✅ | |
+| S1 | CU-02: botón «Aspa desbalanceada» (2 g) | Paro en < 1 s: luz roja, zumbador. El tablero dice «PARO DE SEGURIDAD: vibración excesiva: 1,15 g (límite 1,00 g)». El valor es el primero que cruzó el límite, por eso es menor que 2 | ✅| ✅ 0,36 s visto por la web |
+| S2 | Volver la vibración a 0,1 g | **El paro sigue retenido** (rojo) hasta que lo libere el supervisor |✅ | ✅ |
+| S3 | «Sobrecalentamiento» (85 °C) | Paro por temperatura con su motivo en °C | ✅| ✅ 0,54 s |
+| S4 | «Desconectar MPU-6050» | Paro a los ~2 s: «MPU-6050 sin señal» |✅ | ✅ 2,12 s |
 
 ## 3. Supervisor (página «Supervisor», laptop o tablet)
 
 | # | Acción | Esperado | Laptop | Placa |
 |---|---|---|---|---|
-| U1 | Con el paro de S1 activo, abrir la página | Estado «PARO DE SEGURIDAD» (no «paro_seguridad»), causa con valor y límite, lecturas y último reporte | ✅| |
-| U2 | CU-06: PIN incorrecto y «Reiniciar» | Pide confirmación. Luego «PIN incorrecto.» y la máquina sigue detenida | ✅| |
-| U3 | 5 PIN incorrectos seguidos | Al sexto intento: «Demasiados intentos. Espere 30 s.» |✅ | |
-| U4 | **Con la causa todavía presente** (vibración en 2 g), PIN correcto y «Reiniciar» | «Verificando…» y luego «La máquina se detuvo de nuevo: vibración excesiva…». No dice «volvió a operar» |✅ | |
-| U5 | Normalizar la causa (0,1 g) y reiniciar con el PIN correcto | «La máquina volvió a operar.»; la torre pasa a verde | ✅| |
-| U6 | Después de O4 (máquina detenida por el modelo), reiniciar | Causa «falla reportada por el operario». Tras reiniciar, vuelve a operar | El modelo no la detuvo. Envió a revisión del supervisor con porcentaje de 68%| |
-| U7 | En `/tablero`, revisar los eventos de baja confianza (O8) | Cada evento muestra hora, texto, categoría con %, acción, área y tiempo de respuesta | ✅| |
-| U8 | Con la estación caída (detener el contenedor o `systemctl stop andon-web`), mirar `/tablero` | «Sin comunicación con la estación»; la torre se apaga, no queda congelada | ✅| |
+| U1 | Con el paro de S1 activo, abrir la página | Estado «PARO DE SEGURIDAD» (no «paro_seguridad»), causa con valor y límite, lecturas y último reporte | ✅| ✅ |
+| U2 | CU-06: PIN incorrecto y «Reiniciar» | Pide confirmación. Luego «PIN incorrecto.» y la máquina sigue detenida | ✅| ✅ |
+| U3 | 5 PIN incorrectos seguidos | Al sexto intento: «Demasiados intentos. Espere 30 s.» |✅ | ✅ |
+| U4 | **Con la causa todavía presente** (vibración en 2 g), PIN correcto y «Reiniciar» | «Verificando…» y luego «La máquina se detuvo de nuevo: vibración excesiva…». No dice «volvió a operar» |✅ | ✅ |
+| U5 | Normalizar la causa (0,1 g) y reiniciar con el PIN correcto | «La máquina volvió a operar.»; la torre pasa a verde | ✅| ✅ |
+| U6 | Después de O4 (máquina detenida por el modelo), reiniciar | Causa «falla reportada por el operario». Tras reiniciar, vuelve a operar | El modelo no la detuvo. Envió a revisión del supervisor con porcentaje de 68%| ✅ |
+| U7 | En `/tablero`, revisar los eventos de baja confianza (O8) | Cada evento muestra hora, texto, categoría con %, acción, área y tiempo de respuesta | ✅| ✅ |
+| U8 | Con la estación caída (detener el contenedor o `systemctl stop andon-web`), mirar `/tablero` | «Sin comunicación con la estación»; la torre se apaga, no queda congelada | ✅| ✅ |
 
 ## 4. Administrador (página «Supervisor», sección Umbrales)
 
 | # | Acción | Esperado | Laptop | Placa |
 |---|---|---|---|---|
-| A1 | CU-07: vibración = 9 | «Vibración RMS máxima: debe ser mayor que 0 y como máximo 4.» El archivo no cambia |✅ | |
-| A2 | Vibración = 0,05 con el PIN correcto | «Umbrales guardados…». En ~1 s la estación se detiene por vibración (0,1 g > 0,05 g), **sin reiniciar servicios** | ✅| |
-| A3 | Restaurar vibración = 1 y reiniciar la máquina | Vuelve a verde | ✅ | |
-| A4 | Confianza mínima = 0,5 y repetir O8 | Ahora puede clasificar sin revisión manual. Restaurar 0,92 al terminar | ✅ detuvo la máquina| |
+| A1 | CU-07: vibración = 9 | «Vibración RMS máxima: debe ser mayor que 0 y como máximo 4.» El archivo no cambia |✅ | ✅ |
+| A2 | Vibración = 0,05 con el PIN correcto | «Umbrales guardados…». En ~1 s la estación se detiene por vibración (0,1 g > 0,05 g), **sin reiniciar servicios** | ✅| ✅ |
+| A3 | Restaurar vibración = 1 y reiniciar la máquina | Vuelve a verde | ✅ | ✅ |
+| A4 | Confianza mínima = 0,5 y repetir O8 | Ahora puede clasificar sin revisión manual. Restaurar 0,92 al terminar | ✅ detuvo la máquina| ✅ 68,3 % → detenida |
 
 ---
 
@@ -108,7 +108,7 @@ con la misma confianza. Anotar siempre la categoría y la confianza obtenidas.
 | Ejecución | Fecha | Quién | Dispositivos | ✅ | ❌ | ⚠️ | Notas |
 |---|---|---|---|---|---|---|---|
 | Laptop | 11 nov 2026 | Eduardo | Firefox en la laptop (supervisor, tablero, simulador) y celular por la Wi-Fi local (operario) | 28 | 0 | 5 | O14 y A1 corregidos y repetidos; ver «Revisión» |
-| Placa | | | | | | | |
+| Placa | 12 nov 2026 | Claude (Playwright) con Diego | Chromium sin pantalla por túnel SSH: celular emulado de 390 px (operario) y 1366 px (supervisor) | 31 | 0 | 2 | Detalle y capturas: `evidencias/b3-aceptacion-placa-20261112/`. `/defensa` 10/10 |
 
 ## Revisión de la ejecución en la laptop (11 nov)
 
