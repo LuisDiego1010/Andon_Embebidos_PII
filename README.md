@@ -112,6 +112,8 @@ scripts/
 docs/
   decisiones/            Registro de decisiones de diseño
   evidencias/            Resultados de las pruebas en la PC y en la placa
+  registro-trabajo-diego.md            Bitácora de Luis Diego (imagen Yocto, integración y pruebas en la placa)
+  Bitácora Individual de Trabajo.md    Bitácora de Eduardo (aplicación, pruebas y aceptación)
 ```
 
 ## 5. Generar e instalar la imagen
