@@ -269,3 +269,14 @@ def test_temperatura_vuelve_a_automatica(sim):
     web.post("/api/sim/ajustar", json={"temp_c": 80})
     web.post("/api/sim/ajustar", json={"temp_c": None})
     assert broker.ultimo(topicos.SIM_AJUSTAR)["temp_c"] is None
+
+
+def test_simulador_disponible_en_modo_hibrido(tmp_path):
+    ruta = tmp_path / "andon.conf"
+    shutil.copy(CONF, ruta)
+    cfg = cargar(ruta=str(ruta), entorno={"ANDON_MODO": "hibrido"})
+    servicio = ServicioWeb(cfg, BrokerFalso().cliente(), ruta_conf=str(ruta),
+                           cargador=lambda: cfg)
+    servicio.preparar()
+    web = crear_app(servicio).test_client()
+    assert web.get("/simulador").status_code == 200 and web.get("/defensa").status_code == 200

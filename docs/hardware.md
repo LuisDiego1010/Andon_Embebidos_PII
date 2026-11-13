@@ -8,14 +8,28 @@ Numeración BCM. Acceso solo con libgpiod v2 (`/dev/gpiochip0`).
 
 | Señal | GPIO | Pin físico | Dirección | Nota |
 |---|---|---|---|---|
-| I2C SDA | 2 | 3 | bus 1 | MPU-6050 (0x68) y OLED SSD1306 (0x3C) en el mismo bus, a 400 kHz |
+| I2C SDA | 2 | 3 | bus 1 | MPU-6050 (0x68) y pantalla en el mismo bus, a 400 kHz. Pantalla: OLED SSD1306 (0x3C) o LCD 16x2 con PCF8574 (0x27), según `[i2c] pantalla` |
 | I2C SCL | 3 | 5 | bus 1 | |
 | 1-Wire (DS18B20) | 4 | 7 | w1-gpio | Resistencia de 4,7 kΩ entre datos y 3,3 V |
 | MOSFET del ventilador | 17 | 11 | salida | Activo en alto. Resistencia de 10 kΩ de la compuerta a GND |
 | LED verde | 22 | 15 | salida | Con resistencia serie |
 | LED amarillo | 27 | 13 | salida | Con resistencia serie |
 | LED rojo | 23 | 16 | salida | Con resistencia serie |
-| Zumbador | 24 | 18 | salida | Activo. Si consume más de 8 mA, mediante un transistor |
+| Zumbador | 24 | 18 | salida | Activo, activo en alto. Montaje de la demo: GPIO → 1 kΩ → base de un 2N2222; emisor a GND; colector al (−) del zumbador; (+) del zumbador a 5 V |
+
+## Montaje de la demo (12 nov, modo híbrido, D18)
+
+Solo salidas: 3 LEDs, zumbador y LCD. Sin MPU-6050, DS18B20, MOSFET ni ventilador (GPIO 17 y 4 sin conectar).
+
+| Riel de la protoboard | Desde | Alimenta |
+|---|---|---|
+| + de arriba | 3,3 V (pin 1) | Solo la LCD (así SDA y SCL quedan a 3,3 V, REQ-N07) |
+| + de abajo | 5 V (pin 2) | Solo el (+) del zumbador; el GPIO 24 solo ve la base del 2N2222 por 1 kΩ |
+| − (los dos, unidos) | GND (pin 6) | Todos los GND |
+
+Pantalla: LCD de caracteres 16x2 (HD44780) con adaptador I2C PCF8574 (placa «MH»), en 0x27. A 3,3 V se lee
+bien; el contraste se ajusta con el potenciómetro azul del adaptador. Verificado en la placa el 12 nov
+(`docs/evidencias/b8-hibrido-placa-20261112.txt`).
 
 ## Reglas de seguridad eléctrica
 

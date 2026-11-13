@@ -10,7 +10,8 @@ import os
 from dataclasses import dataclass, field, replace
 
 RUTA_POR_DEFECTO = "/etc/andon/andon.conf"
-MODOS = ("sim", "rpi")
+MODOS = ("sim", "hibrido", "rpi")
+PANTALLAS = ("ssd1306", "lcd1602")  # hibrido: sensores simulados, salidas reales (D18)
 
 
 class ErrorConfig(ValueError):
@@ -57,7 +58,8 @@ class Gpio:
 class I2c:
     bus: int = 1
     mpu: int = 0x68
-    oled: int = 0x3C
+    oled: int = 0x3C            # dirección de la pantalla, sea OLED o LCD
+    pantalla: str = "ssd1306"   # ssd1306 (OLED 128x64) | lcd1602 (LCD 16x2 con PCF8574, D18)
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,11 @@ class Config:
     sensores: SensoresCfg = field(default_factory=SensoresCfg)
     gpio: Gpio = field(default_factory=Gpio)
     i2c: I2c = field(default_factory=I2c)
+
+    @property
+    def entradas_simuladas(self):
+        """Sensores del panel /simulador (sim y hibrido): habilita sim/inyectar y sim/ajustar."""
+        return self.modo in ("sim", "hibrido")
     web: Web = field(default_factory=Web)
 
 
@@ -119,6 +126,10 @@ def _validar(c):
         raise ErrorConfig(f"[gpio] hay pines repetidos: {pines}")
     if not all(0 <= p <= 27 for p in pines):
         raise ErrorConfig(f"[gpio] pin fuera de 0..27: {pines}")
+    if c.i2c.pantalla not in PANTALLAS:
+        raise ErrorConfig(f"[i2c] pantalla inválida: {c.i2c.pantalla!r} (use {' o '.join(PANTALLAS)})")
+    if not 0x03 <= c.i2c.oled <= 0x77:
+        raise ErrorConfig(f"[i2c] dirección de la pantalla fuera de 0x03..0x77: {c.i2c.oled:#x}")
     if not 0 < c.mqtt.puerto < 65536 or not 0 < c.web.puerto < 65536:
         raise ErrorConfig("puerto fuera de rango")
     return c
@@ -152,7 +163,7 @@ def cargar(ruta=None, entorno=None):
         gpio=_seccion(cp, "gpio", base.gpio, {
             "chip": str, "maquina": int, "verde": int, "amarilla": int,
             "roja": int, "zumbador": int}),
-        i2c=_seccion(cp, "i2c", base.i2c, {"bus": int, "mpu": int, "oled": int}),
+        i2c=_seccion(cp, "i2c", base.i2c, {"bus": int, "mpu": int, "oled": int, "pantalla": str}),
         web=_seccion(cp, "web", base.web, {"host": str, "puerto": int, "pin": str}),
     )
 

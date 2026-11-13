@@ -68,6 +68,7 @@ class FakeSMBus:
         self.muestra = muestra  # cuentas crudas (ax, ay, az)
         self.escrituras = []
         self.bloques = []
+        self.bytes = []
         self.falla_oled = False
         self.cerrado = False
         self.falla = False
@@ -88,6 +89,12 @@ class FakeSMBus:
             raise OSError(121, "Remote I/O error")
         assert len(datos) <= 32
         self.bloques.append((addr, reg, list(datos)))
+
+    def write_byte(self, addr, valor):          # adaptador PCF8574 de la LCD
+        if self.falla or self.falla_oled:
+            raise OSError(121, "Remote I/O error")
+        assert 0 <= valor <= 0xFF
+        self.bytes.append((addr, valor))
 
     def read_i2c_block_data(self, addr, reg, n):
         if self.falla:

@@ -49,7 +49,7 @@ do_install() {
     fi
 
     # Herramientas de prueba y calibración en la placa
-    for t in probar_sin_hardware probar_hal inyector enviar_reporte calibrar; do
+    for t in probar_sin_hardware probar_hal inyector enviar_reporte calibrar probar_calentamiento; do
         install -m 0755 ${S}/tools/$t.py ${D}/opt/andon/
     done
     install -m 0755 ${S}/tools/modo.sh ${D}/opt/andon/
@@ -62,6 +62,10 @@ do_install() {
     for u in andon-sensores andon-core andon-web; do
         install -m 0644 ${WORKDIR}/$u.service ${D}${systemd_system_unitdir}/
     done
+
+    # Punto de acceso Andon-E1: IP fija 192.168.4.1 en wlan0 (hostapd y dnsmasq: meta-andon/recipes-connectivity)
+    install -d ${D}${sysconfdir}/systemd/network
+    install -m 0644 ${S}/deploy/red/10-wlan0.network ${D}${sysconfdir}/systemd/network/
 
     install -d -m 0750 ${D}/var/lib/andon
     chown -R andon:andon ${D}/var/lib/andon
@@ -76,6 +80,7 @@ do_install() {
 FILES:${PN} += " \
     /opt/andon \
     ${sysconfdir}/andon \
+    ${sysconfdir}/systemd/network \
     /var/lib/andon \
     ${systemd_system_unitdir} \
 "

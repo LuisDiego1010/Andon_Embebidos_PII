@@ -383,3 +383,11 @@ def test_panel_se_ignora_fuera_del_modo_sim(tmp_path):
     e.svc._on_ajustar(topicos.SIM_AJUSTAR, {"vib_g": 2.0})     # ni siquiera a mano
     e.avanzar(3)
     assert not e.svc.seguridad.activo
+
+
+def test_panel_funciona_en_modo_hibrido(tmp_path):
+    e = Entorno(tmp_path, modo="hibrido")      # D18: sensores del panel, salidas reales
+    e.avanzar(2)
+    e.broker.publicar(topicos.SIM_AJUSTAR, {"vib_g": 2.0})
+    e.avanzar(2)
+    assert e.svc.seguridad.causa.sensor == "vibracion"
