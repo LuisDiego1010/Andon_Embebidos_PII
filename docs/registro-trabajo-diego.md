@@ -3,7 +3,7 @@
 **Proyecto:** II Proyecto EdgeAI · Estación Andon Inteligente de Borde · EL5841 Taller de Sistemas Embebidos, ITCR
 **Autor:** Luis Diego García Rojas · roles: líder técnico (arquitecto de sistemas) e investigador
 **Equipo:** Eduardo Tencio (director de proyecto · auditor de calidad)
-**Periodo:** 23 de octubre – 9 de noviembre de 2026
+**Periodo:** 23 de octubre – 12 de noviembre de 2026
 
 Este documento reúne lo trabajado en la propuesta, la imagen Yocto, la integración con la
 app y las primeras pruebas en la placa. Sirve de base para las bitácoras por rol
@@ -212,6 +212,47 @@ KAS_CONTAINER_ENGINE=podman kas-container build andon.yml 2>&1 | tee compilacion
 | `apt` no descargaba dentro de los contenedores | La red del TEC no deja pasar el puerto 80 desde ellos | `apt` por HTTPS |
 | `localhost:5000` no respondía | `localhost` resolvía primero a IPv6 y la web escucha en IPv4 | Usar `127.0.0.1` |
 
+### 12 nov · Aceptación en la placa y hardware real (trabajo en conjunto con Eduardo)
+
+Sesión presencial en el laboratorio, Diego y Eduardo juntos, con la imagen final de la rama `app/imagen-final`
+(punto de acceso `Andon-E1`, root con contraseña y sin `debug-tweaks`, modo híbrido D18).
+
+**Actividades**
+- Grabación de la microSD con `bmaptool` (3 min 27 s, verificada contra el `.bmap`) y arranque con
+  acceso por SSH en enlace local IPv6.
+- Fase 1: los 8 servicios activos y `verificar-imagen.sh` con 34 OK, 0 fallos (3 avisos por los sensores ausentes).
+- B1: `probar_sin_hardware.py` 70/70 con el modelo real.
+- B2: el celular se conectó a `Andon-E1` y recibió `192.168.4.14`.
+- B3: guion de aceptación (`docs/aceptacion.md`, 33 pasos) automatizado con Playwright por un túnel SSH,
+  con un celular emulado de 390 px y una pantalla de supervisor; U8 por SSH. Resultado: 31 ✅, 0 ❌, 2 ⚠️.
+- B4: `/defensa` 10/10, con CSV y captura.
+- B8: cableado de 3 LEDs, zumbador (2N2222 a 5 V) y pantalla. Prueba de cada salida por separado con
+  `gpioset`. La pantalla resultó ser una LCD 16×2 con adaptador PCF8574 en 0x27; se escribió
+  `hal/lcd1602.py` (opción `[i2c] pantalla`), con 9 pruebas nuevas (382 en verde). Secuencia de demo en
+  modo híbrido confirmada en físico: paro → rojo y zumbador; reinicio → verde; calidad → amarillo;
+  falla eléctrica → rojo, con los textos correctos en la LCD.
+- B6: sin ruta por defecto ni conexiones salientes.
+- B5: corte de corriente con paro retenido y un reporte en análisis: todo arrancó solo, el paro siguió
+  retenido y `andon.db` quedó íntegra.
+- Recompilación de la imagen con el driver de la LCD; commits y push de `app/imagen-final`.
+
+**Decisiones**
+- PIN `1234` y clave Wi-Fi `andon-e1-demo` se mantienen para la demo (coinciden con los guiones).
+- La demo usa el modo híbrido: sensores del panel `/simulador`, salidas reales. No se compra el MPU-6050.
+- El DHT11 queda fuera de esta entrega (requiere un overlay nuevo y cambia el rango de temperatura).
+
+**Problemas y soluciones**
+
+| Problema | Causa | Solución |
+| --- | --- | --- |
+| La primera pasada automática marcó 5 ❌ | El script leía el resultado anterior, que sigue en pantalla las décimas de segundo antes de «Analizando…» | Se confirmó cada respuesta en la tabla `eventos` de `andon.db`, se corrigió la espera y se repitieron los casos: todos ✅ |
+| `i2cdetect` mostraba 0x27 y no 0x3C | La pantalla es una LCD de caracteres con PCF8574, no una OLED SSD1306 | Identificación por la luz de fondo y un texto de prueba; driver `lcd1602` |
+| El reporte en análisis durante el corte se perdió | Estaba en memoria, en el modelo | Aceptado: el operario ve «No llegó respuesta a tiempo» con su texto y lo reenvía |
+| `rpcbind` escucha en el puerto 111 de todas las interfaces | Viene en la imagen y la app no lo usa | Sin efecto en REQ-N01; quitarlo de la imagen |
+| ⚠️ O5 y O7 terminan en revisión manual | Frases cortas (≈ 51 %) y «se acabaron los tornillos» (89–91 %, justo bajo 0,92) | Comportamiento seguro (REQ-F08); la demo usa frases concretas |
+
+Evidencias: `docs/evidencias/b1-*`, `b3-aceptacion-placa-20261112/`, `b4-*`, `b5-*`, `b6-*`, `b8-*`.
+
 ## 3. Resultados en la placa
 
 ### 3.1 `verificar-imagen.sh` (E1, E2, E3)
@@ -290,15 +331,15 @@ que el modelo clasifique con seguridad, o revisar el umbral.
 - [x] Pasar resultados y cambios a Eduardo (timeout, umbral, frase de CU-03): `docs/traspaso.md`.
 - [x] Revisar los avisos de la compilación: las del 9 nov dan 1 solo, «Host distribution debian-13 has not
       been validated» (el contenedor de kas); no afecta a la imagen.
-- [ ] Conseguir y cablear el hardware (LEDs, zumbador, ventilador + transistor, DS18B20,
-      MPU-6050, OLED).
+- [x] Hardware de la demo (12 nov): LEDs, zumbador y LCD reales en modo híbrido. Sin MPU-6050,
+      DS18B20 ni ventilador: los sensores salen del panel /simulador (D18).
 - [x] Recibir de la app: `__main__.py` de cada servicio (9 nov). `make install` y la configuración
       de hostapd y dnsmasq siguen pendientes.
 - [x] Activar los servicios en la receta (`SYSTEMD_AUTO_ENABLE = "enable"`) y recompilar.
 - [x] Pruebas CU-01 a CU-07 sobre la imagen Yocto (en modo sim, con el modelo real).
-- [ ] Red para la defensa: punto de acceso propio o hotspot.
-- [ ] Probar un corte de corriente con la app en marcha (REQ-N06).
-- [ ] Quitar `debug-tweaks` y cambiar el PIN antes de la entrega.
+- [x] Red para la defensa: punto de acceso propio `Andon-E1` (12 nov).
+- [x] Probar un corte de corriente con la app en marcha (REQ-N06): B5, 12 nov.
+- [x] Quitar `debug-tweaks` (imagen final). El PIN de ejemplo se mantiene para la demo (decisión del 12 nov).
 - [ ] Bitácoras por rol (líder técnico e investigador) y repositorio público final.
 
 ---

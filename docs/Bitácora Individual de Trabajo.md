@@ -47,6 +47,8 @@
 * Etiqueta `v0.9-sim` en `app/dev`, publicada en GitHub.
 * Versión final probada en la Raspberry Pi 4 con hardware de salida real (LEDs, zumbador y pantalla LCD) en modo híbrido (D18).
 * Evidencias de la aceptación en la placa (`docs/evidencias/b1-*` a `b8-*`): prueba sin hardware, guion de aceptación con capturas, `/defensa`, corte de corriente, sin Internet y secuencia de la demo.
+* Controlador de la LCD 16x2 con adaptador PCF8574 (`app/src/andon/hal/lcd1602.py`) y opción `[i2c] pantalla = ssd1306 | lcd1602`; montaje real de la demo en el README, §6.4 «Conexión del hardware».
+* Pruebas: 382 unitarias y de integración en verde (x86).
 
 ---
 
@@ -84,3 +86,5 @@
 * Documentación de Docker Compose y de la API local de Ollama (`/api/version`, `/v1/systemone`).
 * Documentación de hostapd, dnsmasq y systemd-networkd (punto de acceso Wi-Fi).
 * MDN Web Docs: validación de formularios HTML (`novalidate`, `input type="number"`).
+* Hojas de datos del controlador HD44780 (inicio en modo de 4 bits) y del expansor I2C PCF8574.
+* Documentación de Playwright para Python (pruebas con navegador sin pantalla).
