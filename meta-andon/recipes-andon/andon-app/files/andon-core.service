@@ -1,0 +1,17 @@
+[Unit]
+Description=Andon · núcleo de decisión (modelo de decisión vía Ollama)
+After=mosquitto.service ollama.service
+Wants=mosquitto.service ollama.service
+
+[Service]
+User=andon
+Group=andon
+Environment=PYTHONPATH=/opt/andon
+Environment=ANDON_CONF=/etc/andon/andon.conf
+StateDirectory=andon
+ExecStart=/usr/bin/python3 -m andon.core
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

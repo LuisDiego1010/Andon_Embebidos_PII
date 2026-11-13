@@ -1,0 +1,65 @@
+# Configuración de kas: descarga las capas en versiones fijas y genera
+# conf/local.conf y conf/bblayers.conf automáticamente.
+#   Compilar:  kas build andon.yml
+#   Entrar al entorno de bitbake:  kas shell andon.yml
+header:
+  version: 14
+
+machine: raspberrypi4-64
+distro: poky
+target: andon-image
+
+repos:
+  meta-andon:
+    path: meta-andon
+
+  poky:
+    url: https://github.com/yoctoproject/poky
+    branch: scarthgap
+    commit: b6ae714a1d1bfae8384654a13da15996cac64712
+    layers:
+      meta:
+      meta-poky:
+
+  meta-openembedded:
+    url: https://github.com/openembedded/meta-openembedded
+    branch: scarthgap
+    commit: 2db6aece32c7f8ebf6015b468e1b4e21de072e3b
+    layers:
+      meta-oe:
+      meta-python:
+      meta-networking:
+
+  meta-raspberrypi:
+    url: https://github.com/agherzan/meta-raspberrypi
+    branch: scarthgap
+    commit: 018d44467c4f09eb63f8ea5e86e85d755250cf89
+
+local_conf_header:
+  andon-sistema: |
+    # systemd como sistema de arranque (los servicios de la estación lo usan)
+    INIT_MANAGER = "systemd"
+
+  andon-hardware: |
+    # Bus I2C para el MPU-6050 y la OLED, y módulo i2c-dev para usarlo desde Linux
+    ENABLE_I2C = "1"
+    KERNEL_MODULE_AUTOLOAD:rpi += "i2c-dev"
+    # I2C a 400 kHz (lo pide andon-sensores para el MPU-6050 y la OLED)
+    RPI_EXTRA_CONFIG = "dtparam=i2c_arm_baudrate=400000"
+    # Bus 1-Wire para el DS18B20 (overlay w1-gpio, pin por defecto: GPIO 4)
+    ENABLE_W1 = "1"
+    # Consola serial para depurar sin pantalla
+    ENABLE_UART = "1"
+    # Licencia del firmware de Wi-Fi de la Raspberry Pi
+    LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
+
+  andon-acceso: |
+    # Sin debug-tweaks (root ya no entra sin contraseña). Solo se permite que root entre por SSH;
+    # la contraseña se fija en meta-andon/recipes-core/images/andon-image.bb.
+    EXTRA_IMAGE_FEATURES += "allow-root-login"
+
+  andon-compilacion: |
+    # Formatos de salida: imagen para grabar en la microSD con bmaptool o dd
+    IMAGE_FSTYPES = "wic.bz2 wic.bmap"
+    # Libera espacio en disco borrando el trabajo temporal de cada receta
+    INHERIT += "rm_work"

@@ -1,0 +1,14 @@
+# B8 · Modo híbrido en la RPi 4 (12 nov 2026, laboratorio)
+# Sensores del panel /simulador; LEDs (GPIO 22/27/23), zumbador (GPIO 24, 2N2222 a 5 V) y LCD 16x2 PCF8574 (0x27) reales.
+# Antes: cada LED y el zumbador probados por separado con gpioset; LCD identificada por i2cdetect (0x27) y una
+# prueba de luz de fondo y texto. Diego confirmó en físico que luces, zumbador y textos siguieron la secuencia.
+# Modelo real tev1:0.8b. Salida de /root/demo_hibrido.py (llama a la API de la web, como el panel):
+
+09:53:45 inicio                           luz=verde     zumbador=False maquina=True  paro=False pantalla=['OPERANDO']
+09:53:47 1. aspa desbalanceada            luz=roja      zumbador=True  maquina=False paro=True pantalla=['PARO', 'vibracion', '1.15>1.00']
+09:53:55 2. normal + reinicio             luz=verde     zumbador=False maquina=True  paro=False pantalla=['OPERANDO']
+   modelo: problema_calidad 0.999 -> avisar (16.8 s)
+09:54:13 3. reporte de calidad            luz=amarilla  zumbador=False maquina=True  paro=False pantalla=['CALIDAD', 'Aviso a calidad']
+   modelo: falla_electrica 0.986 -> parar_maquina (17.1 s)
+09:54:36 4. falla eléctrica               luz=roja      zumbador=True  maquina=False paro=False pantalla=['FALLA ELECTRICA', 'Mantenimiento']
+09:54:44 5. reinicio                      luz=verde     zumbador=False maquina=True  paro=False pantalla=['OPERANDO']

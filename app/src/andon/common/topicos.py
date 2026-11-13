@@ -1,0 +1,23 @@
+"""Tópicos MQTT del contrato (CLAUDE.md › Contrato MQTT). Payload siempre JSON.
+
+Cualquier cambio aquí se consulta primero y se refleja en CLAUDE.md.
+"""
+
+PREFIJO = "andon/e1/"
+
+LECTURAS = PREFIJO + "lecturas"        # sensores -> *        ts, vib_rms_g, temp_c
+SEGURIDAD = PREFIJO + "seguridad"      # sensores -> core,web (retenido)
+CMD_MAQUINA = PREFIJO + "cmd/maquina"  # core,web -> sensores  accion: parar|reiniciar
+CMD_SENAL = PREFIJO + "cmd/senal"      # core -> sensores      luz, zumbador, oled
+REPORTE = PREFIJO + "reporte"          # web -> core           id, texto, ts_navegador
+EVENTO = PREFIJO + "evento"            # core -> público   id, ts, lecturas, texto, categoria, prob, accion, area, latencia_ms, error
+ESTADO = PREFIJO + "estado"            # core -> web (retenido)
+CMD_RECARGAR = PREFIJO + "cmd/recargar"  # web -> *
+SIM_INYECTAR = PREFIJO + "sim/inyectar"  # pruebas -> sensores (solo modo sim)
+SIM_AJUSTAR = PREFIJO + "sim/ajustar"    # panel -> sensores (solo modo sim, retenido; D15)
+SALIDAS = PREFIJO + "salidas"          # sensores -> web (retenido)  ts, maquina, luz, zumbador, oled (D12)
+
+RETENIDOS = frozenset({SEGURIDAD, ESTADO, SALIDAS})
+
+LUCES = ("verde", "amarilla", "roja")
+ACCIONES_MAQUINA = ("parar", "reiniciar")

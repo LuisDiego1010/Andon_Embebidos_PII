@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "andon"
+version = "0.1.0"
+description = "Estación Andon Inteligente de Borde (EL5841, II Proyecto)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+web = ["flask"]
+mqtt = ["paho-mqtt"]
+i2c = ["smbus2"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["contract: requiere Ollama real en ejecución", "integracion: requiere Mosquitto real"]

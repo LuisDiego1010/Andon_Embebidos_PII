@@ -1,0 +1,102 @@
+# Prueba sin hardware en la RPi 4 con la imagen Yocto (9 nov 2026)
+# python3 /opt/andon/probar_sin_hardware.py · modelo real tev1:0.8b · cable directo sin DHCP
+# Arranque: mosquitto y servicios andon activos a los 8,6 s (H1 resuelto). verificar-imagen.sh: 34 OK · 0 fallos · 3 avisos (sin sensores).
+# El único fallo (retrasos del lazo) se corrigió después: reintento del MPU-6050 cada 0,5 s (hal/rpi.py).
+# Verificación tras la corrección: 3 min en modo real sin sensores, 0 timeouts I2C y 0 retrasos.
+
+
+== Servicios y permisos
+  [OK]    mosquitto activo
+  [OK]    ollama activo
+  [OK]    andon-sensores activo
+  [OK]    andon-core activo
+  [OK]    andon-web activo
+  [OK]    andon-sensores habilitado al arrancar (REQ-N06)
+  [OK]    andon-core habilitado al arrancar (REQ-N06)
+  [OK]    andon-web habilitado al arrancar (REQ-N06)
+  [OK]    web /
+  [OK]    web /tablero
+  [OK]    web /supervisor
+  [OK]    la configuración es del usuario andon
+  [OK]    el PIN no es legible por otros usuarios
+
+== Modo real sin sensores: libgpiod, permisos y D13
+  [OK]    el simulador no existe en modo real
+  [OK]    los ajustes no existen en modo real
+  [OK]    sin sensores detiene la máquina (D13)
+  [OK]    el motivo es un sensor ausente
+  [OK]    máquina detenida y luz roja
+  [OK]    el servicio sigue vivo con el hardware real abierto
+  [OK]    las 5 salidas están tomadas por andon-sensores
+  [OK]    GPIO17 (MOSFET) está en bajo durante el paro
+  [OK]    PIN incorrecto rechazado
+  [OK]    reiniciar sin sensores vuelve a detener: la falla sigue presente
+
+== Activando modo sim (drop-in temporal)
+  [OK]    sensores simulados publicando
+  Esperando a que cargue el modelo (hasta 90 s)…
+  [OK]    andon-core en reposo con el modelo cargado
+
+== CU-01 a CU-07 con el modelo real
+  [OK]    CU-01 luz verde y máquina en marcha
+  [OK]    reporte normal → sin acción
+  [OK]    CU-04 calidad → aviso
+  [OK]    CU-04 amarilla y la máquina sigue
+  [OK]    CU-05 ambiguo → revisión manual
+  [OK]    CU-05 la máquina sigue
+  [OK]    CU-03 falla eléctrica → paro
+  [OK]    CU-03 máquina detenida y luz roja
+        latencia: 17.4 s · confianza 0.986
+  [OK]    el evento usa la hora del navegador (D9)
+  [OK]    CU-06 PIN incorrecto rechazado
+  [OK]    CU-06 sigue detenida con PIN incorrecto
+  [OK]    CU-06 con PIN correcto vuelve a verde
+  [OK]    REQ-F10 eventos guardados en SQLite
+
+== CU-02 paro de seguridad
+  [OK]    paro por vibración
+  [OK]    REQ-N04 paro en 513 ms visto desde la web
+  [OK]    máquina detenida
+  [OK]    el paro sigue retenido al desaparecer la falla
+  [OK]    el paro sobrevive al reinicio del servicio
+  [OK]    se libera con PIN
+  Paro con el modelo calculando…
+  [OK]    luz amarilla mientras analiza
+  [OK]    REQ-N04 paro en 375 ms con Ollama calculando
+  [OK]    el modelo no levantó el paro
+  [OK]    se libera con PIN
+
+== Panel del simulador
+  [OK]    página /simulador disponible
+  [OK]    valor fuera de rango rechazado
+  [OK]    MPU-6050 desconectado desde el panel
+  [OK]    sensor desconectado → paro D13
+  [OK]    se libera al reconectar
+  [OK]    perilla de vibración a 2 g
+  [OK]    la perilla dispara el paro por vibración
+  [OK]    se libera al normalizar
+  [OK]    la perilla dispara el paro por temperatura
+  [OK]    se libera al volver a automático
+
+== CU-07 umbrales sin reiniciar
+  [OK]    valor fuera de rango rechazado
+  [OK]    umbral bajo guardado
+  [OK]    sensores aplican el umbral nuevo sin reiniciar
+  [OK]    umbral restaurado
+  [OK]    se libera con PIN
+
+== Ollama caído
+  [OK]    falla del modelo → revisión manual
+  [OK]    la máquina sigue en marcha
+  [OK]    el paro funciona sin Ollama
+
+== Registros del sistema
+  [OK]    andon-sensores sin excepciones
+  [OK]    andon-core sin excepciones
+  [OK]    andon-web sin excepciones
+  [FALLO] lazo de seguridad sin retrasos (4)
+
+== Restaurando la placa
+  Modo real restaurado. Sin sensores, la máquina volverá a detenerse: es lo esperado.
+
+== Resumen: 69 OK · 1 fallos

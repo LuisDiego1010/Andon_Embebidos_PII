@@ -1,0 +1,103 @@
+# Guion de aceptación (docs/aceptacion.md) en la laptop, 11 nov 2026
+# scripts/simulador-pc.sh --ollama-real --lan · Ollama 0.40.13 en Docker con tev1:0.8b · operario en celular, supervisor en Firefox
+# Horas en UTC. Registro de andon-web incompleto después de 21:06 (se reinició para U8).
+
+## Tabla eventos de SQLite (20 reportes escritos a mano)
+ 1 20:35:37  falla_electrica    52.7 %  revision_manual  4.0 s  «Huele a quemado cerca del motor»
+ 2 20:38:14  operacion_normal  100.0 %  ninguna          4.2 s  «La máquina funciona bien, sin novedades»
+ 3 20:39:15  falla_electrica    70.1 %  revision_manual  4.0 s  «Olor a quemado cerca del motor»
+ 4 20:41:36  falla_electrica    45.0 %  revision_manual  4.0 s  «Salen chispas de cable»
+ 5 20:43:47  falla_mecanica     58.3 %  revision_manual  4.0 s  «Las piezas salen con rebaba»
+ 6 20:44:43  material_faltante  98.2 %  avisar           4.0 s  «Se acabaron los tornillos en línea»
+ 7 20:45:25  falla_mecanica     70.1 %  revision_manual  3.9 s  «Algo raro pasa, no sé que es»
+ 8 20:45:59  falla_electrica    62.1 %  revision_manual  3.8 s  «Huele a quemado»
+ 9 20:46:20  falla_mecanica     52.5 %  revision_manual  4.0 s  «Sale humo»
+10 20:46:35  falla_mecanica     49.5 %  revision_manual  3.9 s  «Hay chispas»
+11 20:47:05  falla_mecanica     80.7 %  revision_manual  3.9 s  «Huele extraño»
+12 20:49:04  operacion_normal   50.0 %  revision_manual  5.7 s  «Sffjdmxbe ñwb du su dhj úüé xjnfnfjcjejfjjcjejej djeufjjcjdjejfkjc oelñdñfñroflckekf jdkek»
+13 20:49:44  falla_mecanica     73.1 %  revision_manual  4.0 s  «La banda hace ruido 🔧»
+14 20:52:06  falla_mecanica     56.5 %  paro_activo      3.8 s  «Huele raro»
+15 20:54:08  falla_mecanica     81.9 %  revision_manual  4.1 s  «huele extraño»
+16 20:54:12  falla_electrica    60.0 %  revision_manual  4.1 s  «Huele a quemado»
+17 21:06:13  falla_electrica    68.0 %  revision_manual  6.2 s  «Olor a quemado cerca del motor»
+18 21:11:32  falla_mecanica     86.2 %  revision_manual  5.8 s  «Una persona cayó en el motor, le amputó una pierna»
+19 21:12:04  falla_mecanica     97.1 %  parar_maquina    3.7 s  «El motor hace sonidos extraños y hecha humo, parece que va a explotar»
+20 21:17:34  falla_mecanica     70.4 %  parar_maquina    5.7 s  «Algo raro pasa, no sé que es»
+
+## Frases de /defensa y variantes, enviadas por la API después del guion
+falla_electrica    98.6 %  parar_maquina    7.6 s  «Huele a quemado y salió una chispa del cable de alimentación»
+problema_calidad   99.9 %  avisar           3.7 s  «Las piezas salen rayadas y fuera de especificación»
+falla_mecanica     67.4 %  revision_manual  3.8 s  «Algo raro pasa, no sé qué es»
+operacion_normal  100.0 %  ninguna          4.1 s  «Todo funciona bien, la máquina corre sin problemas»
+falla_electrica    95.5 %  parar_maquina    4.2 s  «Olor a quemado cerca del motor, sale humo del cable de alimentación»
+problema_calidad   99.8 %  avisar           3.7 s  «Las piezas salen con rebaba y fuera de medida»
+
+## Registro: calentamiento, paros, reinicios, umbrales y reportes
+20:31:22,081 INFO andon.core.servicio: estado: reposo → calentando
+20:31:29,532 INFO andon.core.ollama: modelo tev1:0.8b listo en 7.5 s
+20:31:29,532 INFO andon.core.servicio: estado: calentando → reposo
+20:35:38,749 INFO andon.core.servicio: reporte 7f64a487 → falla_electrica (0.53) · revision_manual · 4010 ms
+20:38:16,217 INFO andon.core.servicio: reporte 8a8307e0 → operacion_normal (1.00) · ninguna · 4236 ms
+20:39:17,492 INFO andon.core.servicio: reporte a1d56de3 → falla_electrica (0.70) · revision_manual · 3972 ms
+20:41:38,021 INFO andon.core.servicio: reporte 6126435e → falla_electrica (0.45) · revision_manual · 4002 ms
+20:43:48,471 INFO andon.core.servicio: reporte 4e006d16 → falla_mecanica (0.58) · revision_manual · 4017 ms
+20:44:45,436 INFO andon.core.servicio: reporte c81ded64 → material_faltante (0.98) · avisar · 4027 ms
+20:45:26,910 INFO andon.core.servicio: reporte 2bffbca4 → falla_mecanica (0.70) · revision_manual · 3927 ms
+20:46:01,443 INFO andon.core.servicio: reporte 12897a1b → falla_electrica (0.62) · revision_manual · 3846 ms
+20:46:21,862 INFO andon.core.servicio: reporte ec8fda74 → falla_mecanica (0.53) · revision_manual · 3984 ms
+20:46:37,130 INFO andon.core.servicio: reporte f5846b2f → falla_mecanica (0.50) · revision_manual · 3925 ms
+20:47:06,802 INFO andon.core.servicio: reporte 8df89c27 → falla_mecanica (0.81) · revision_manual · 3900 ms
+20:49:05,806 INFO andon.core.servicio: reporte 773fd643 → operacion_normal (0.50) · revision_manual · 5734 ms
+20:49:45,730 INFO andon.core.servicio: reporte 75b74fbc → falla_mecanica (0.73) · revision_manual · 3980 ms
+20:51:26,144 ERROR andon.sensores.servicio: PARO por vibracion: 1.135 (umbral 1.000); máquina detenida en 0.8 ms
+20:52:08,471 INFO andon.core.servicio: reporte ff1abf84 → falla_mecanica (0.56) · paro_activo · 3771 ms
+20:52:39,266 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:52:39,844 ERROR andon.sensores.servicio: PARO por vibracion: 1.999 (umbral 1.000); máquina detenida en 0.75 ms
+20:53:21,500 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:53:22,043 ERROR andon.sensores.servicio: PARO por vibracion: 2.001 (umbral 1.000); máquina detenida en 0.46 ms
+20:53:32,343 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:53:32,844 ERROR andon.sensores.servicio: PARO por vibracion: 2.000 (umbral 1.000); máquina detenida en 0.7 ms
+20:53:40,508 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:54:08,671 INFO andon.core.servicio: reporte b1205c44 → falla_mecanica (0.82) · revision_manual · 4064 ms
+20:54:14,587 INFO andon.core.servicio: reporte 76876de3 → falla_electrica (0.60) · revision_manual · 4121 ms
+20:54:49,843 ERROR andon.sensores.servicio: PARO por vibracion: 1.165 (umbral 1.000); máquina detenida en 0.62 ms
+20:55:09,483 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:55:10,042 ERROR andon.sensores.servicio: PARO por vibracion: 2.000 (umbral 1.000); máquina detenida en 0.37 ms
+20:55:40,836 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:57:49,044 ERROR andon.sensores.servicio: PARO por vibracion: 1.021 (umbral 1.000); máquina detenida en 0.79 ms
+20:57:59,369 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:58:19,054 ERROR andon.sensores.servicio: PARO por temperatura: 85.000 (umbral 60.000); máquina detenida en 0.62 ms
+20:58:42,510 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+20:58:48,943 ERROR andon.sensores.servicio: PARO por mpu6050_fallo: 2.100 (umbral 2.000); máquina detenida en 0.62 ms
+20:59:15,809 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:02:51,042 ERROR andon.sensores.servicio: PARO por vibracion: 1.041 (umbral 1.000); máquina detenida en 0.38 ms
+21:02:59,934 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:03:14,644 ERROR andon.sensores.servicio: PARO por vibracion: 1.182 (umbral 1.000); máquina detenida en 0.94 ms
+21:03:28,701 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:04:04,509 WARNING andon.web.servicio: PIN incorrecto 5 veces: bloqueado 30 s
+21:04:43,843 ERROR andon.sensores.servicio: PARO por vibracion: 1.147 (umbral 1.000); máquina detenida en 0.5 ms
+21:04:50,852 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:04:51,444 ERROR andon.sensores.servicio: PARO por vibracion: 1.997 (umbral 1.000); máquina detenida en 0.35 ms
+21:05:01,645 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:05:02,143 ERROR andon.sensores.servicio: PARO por vibracion: 1.998 (umbral 1.000); máquina detenida en 0.57 ms
+21:05:17,671 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: True)
+21:06:15,200 INFO andon.core.servicio: reporte 4e8936c5 → falla_electrica (0.68) · revision_manual · 6192 ms
+21:11:34,481 INFO andon.core.servicio: reporte bad68019 → falla_mecanica (0.86) · revision_manual · 5787 ms
+21:12:05,619 INFO andon.sensores.servicio: máquina detenida por orden de core
+21:12:05,626 INFO andon.core.servicio: reporte 249f5b3f → falla_mecanica (0.97) · parar_maquina · 3749 ms
+21:12:12,463 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: False)
+21:15:21,005 INFO andon.sensores.servicio: umbrales recargados: vibración 0.50 g, temperatura 60.0 °C
+21:15:21,006 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.92, modelo tev1:0.8b
+21:16:30,679 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.92, modelo tev1:0.8b
+21:16:30,679 INFO andon.sensores.servicio: umbrales recargados: vibración 1.00 g, temperatura 60.0 °C
+21:16:32,107 INFO andon.sensores.servicio: umbrales recargados: vibración 1.00 g, temperatura 60.0 °C
+21:16:32,107 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.92, modelo tev1:0.8b
+21:16:33,340 INFO andon.sensores.servicio: umbrales recargados: vibración 1.00 g, temperatura 60.0 °C
+21:16:33,340 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.92, modelo tev1:0.8b
+21:17:01,474 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.50, modelo tev1:0.8b
+21:17:01,476 INFO andon.sensores.servicio: umbrales recargados: vibración 1.00 g, temperatura 60.0 °C
+21:17:36,652 INFO andon.sensores.servicio: máquina detenida por orden de core
+21:17:36,655 INFO andon.core.servicio: reporte 06854bc1 → falla_mecanica (0.70) · parar_maquina · 5663 ms
+21:17:52,959 INFO andon.core.servicio: configuración recargada: umbral de confianza 0.92, modelo tev1:0.8b
+21:17:52,960 INFO andon.sensores.servicio: umbrales recargados: vibración 1.00 g, temperatura 60.0 °C
+21:17:55,552 INFO andon.sensores.servicio: reinicio: máquina en marcha (había paro: False)

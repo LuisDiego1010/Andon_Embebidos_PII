@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block titulo %}Tablero{% endblock %}
+{% block contenido %}
+<style>
+  .planta { display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+  .torre { display:flex; flex-direction:column; gap:6px; padding:10px; background:var(--fondo); border-radius:8px; }
+  .luz { width:64px; height:44px; border-radius:6px; opacity:.15; }
+  .luz.on { opacity:1; }
+  #l-roja { background:var(--roja); } #l-amarilla { background:var(--amarilla); } #l-verde { background:var(--verde); }
+  .datos { flex:1; min-width:220px; }
+  .datos.viejos { opacity:.45; }
+  #oled { font-family:monospace; padding:10px; margin-top:12px; background:#000; color:#7fd4ff; border-radius:4px; min-height:3em; white-space:pre-line; }
+  .evento { padding:8px 0; border-bottom:1px solid var(--borde); }
+  .evento:last-child { border-bottom:0; }
+  .evento .det { color:var(--tenue); font-size:.9rem; margin-top:2px; }
+  .evento.roja { border-left:4px solid var(--roja); padding-left:8px; }
+  .evento.amarilla { border-left:4px solid var(--amarilla); padding-left:8px; }
+  .evento.verde { border-left:4px solid var(--verde); padding-left:8px; }
+</style>
+<section>
+  <h1>Estado de la estación</h1>
+  <div id="alerta" class="aviso roja" hidden></div>
+  <div class="planta">
+    <div class="torre" aria-label="Torre Andon"><div id="l-roja" class="luz"></div><div id="l-amarilla" class="luz"></div><div id="l-verde" class="luz"></div></div>
+    <div class="datos" id="datos">
+      <div class="fila"><span>Estado</span><b id="estado">—</b></div>
+      <div class="fila"><span>Máquina</span><b id="maquina">—</b></div>
+      <div class="fila"><span>Zumbador</span><b id="zumbador">—</b></div>
+      <div class="fila"><span>Vibración RMS</span><b id="vib">—</b></div>
+      <div class="fila"><span>Temperatura</span><b id="temp">—</b></div>
+    </div>
+  </div>
+  <div id="oled"></div>
+</section>
+<section>
+  <h2>Últimos eventos</h2>
+  <div id="eventos" class="tenue">Sin eventos desde que arrancó la web.</div>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+function torre(luz) { for (const c of ["roja", "amarilla", "verde"]) $("l-" + c).classList.toggle("on", luz === c); }
+function colorDe(e) {
+  if (["parar_maquina", "paro_activo", "maquina_detenida"].includes(e.accion)) return "roja";
+  return e.accion === "ninguna" ? "verde" : "amarilla";
+}
+function filaEvento(e) {
+  const d = document.createElement("div"); d.className = "evento " + colorDe(e);
+  const t = document.createElement("div"); t.textContent = `${horaDe(e.ts)} · «${e.texto}»`;
+  const r = document.createElement("div");
+  r.textContent = (e.categoria ? `${CATEGORIAS[e.categoria] || e.categoria} (${pct(e.prob)})` : "Sin clasificar")
+    + " → " + (ACCIONES[e.accion] || e.accion);
+  const det = document.createElement("div"); det.className = "det";
+  const partes = [];
+  if (e.area) partes.push("Aviso a " + (AREAS[e.area] || e.area));
+  if (e.error) partes.push(ERRORES[e.error] || e.error);
+  if (typeof e.latencia_ms === "number") partes.push(`respuesta en ${num(e.latencia_ms / 1000, 1)} s`);
+  det.textContent = partes.join(" · ");
+  d.append(t, r, det); return d;
+}
+async function refrescar() {
+  let s;
+  try { s = await api("/api/estado"); }
+  catch (e) {   // sin web: no se deja la torre congelada en el último color
+    $("alerta").hidden = false; $("alerta").textContent = "Sin comunicación con la estación: " + e.message;
+    torre(null); $("estado").textContent = "sin comunicación"; $("datos").classList.add("viejos"); return;
+  }
+  const paro = s.seguridad && s.seguridad.activo;
+  $("alerta").hidden = s.conectado && !paro;
+  $("alerta").textContent = !s.conectado ? "La web perdió la conexión interna con la estación: los datos pueden estar desactualizados."
+    : paro ? `PARO DE SEGURIDAD: ${motivoParo(s.seguridad)}. Queda retenido hasta que un supervisor lo libere con PIN.` : "";
+  $("datos").classList.toggle("viejos", !s.conectado);
+  const sal = s.salidas || {};
+  torre(sal.luz);
+  $("estado").textContent = s.estado ? (ESTADOS[s.estado.estado] || s.estado.estado) : "sin dato";
+  $("maquina").textContent = sal.maquina === undefined ? "sin dato" : sal.maquina ? "En marcha" : "Detenida";
+  $("zumbador").textContent = sal.zumbador === undefined ? "sin dato" : sal.zumbador ? "Sonando" : "Apagado";
+  const frescas = s.lecturas && s.lecturas_edad_s !== null && s.lecturas_edad_s < 5;
+  $("vib").textContent = frescas ? num(s.lecturas.vib_rms_g, 3) + " g" : "sin lecturas";
+  $("temp").textContent = frescas ? num(s.lecturas.temp_c, 1) + " °C" : "sin lecturas";
+  $("oled").textContent = (sal.oled || []).join("\n");
+  if (s.eventos.length) $("eventos").replaceChildren(...s.eventos.map(filaEvento));
+}
+refrescar(); setInterval(refrescar, 1000);
+</script>
+{% endblock %}

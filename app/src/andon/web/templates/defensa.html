@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block titulo %}Defensa{% endblock %}
+{% block clase_main %}ancho{% endblock %}
+{% block contenido %}
+<style>
+  .rejilla { display:grid; grid-template-columns:minmax(0, 1fr) minmax(300px, 400px); gap:16px; align-items:start; }
+  @media (max-width:900px) { .rejilla { grid-template-columns:minmax(0, 1fr); } }
+  .cabecera { display:flex; flex-wrap:wrap; gap:12px; align-items:end; justify-content:space-between; }
+  .cabecera > div { min-width:160px; }
+  .cabecera button { margin:0; }
+  .salud { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:8px; }
+  .chequeo { padding:10px 12px; border-radius:6px; background:var(--fondo); border-left:4px solid var(--borde); font-size:.92rem; }
+  .chequeo.ok { border-color:var(--verde); } .chequeo.mal { border-color:var(--roja); }
+  .chequeo b { display:block; }
+  .caso { display:grid; grid-template-columns:36px minmax(0, 1fr) auto; gap:4px 12px; padding:12px 0; border-bottom:1px solid var(--borde); }
+  .caso:last-child { border-bottom:0; }
+  .marca { font-size:1.4rem; line-height:1.2; text-align:center; }
+  .caso h3 { margin:0; font-size:1rem; }
+  .caso .esperado { color:var(--tenue); font-size:.9rem; }
+  .caso .obtenido { font-size:.9rem; margin-top:4px; }
+  .caso .obtenido.ok { color:var(--verde); } .caso .obtenido.mal { color:var(--roja); }
+  .caso button { margin:0; padding:7px 14px; font-size:.9rem; align-self:start; }
+  .torre { display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
+  .luz { width:46px; height:30px; border-radius:5px; opacity:.13; }
+  .luz.on { opacity:1; box-shadow:0 0 14px currentColor; }
+  #l-roja { background:var(--roja); color:var(--roja); } #l-amarilla { background:var(--amarilla); color:var(--amarilla); } #l-verde { background:var(--verde); color:var(--verde); }
+  .barra { display:grid; grid-template-columns:130px minmax(0, 1fr) 62px; gap:8px; align-items:center; font-size:.88rem; margin:5px 0; }
+  .barra .fondo { height:14px; background:var(--fondo); border-radius:3px; position:relative; overflow:hidden; }
+  .barra .valor { height:100%; background:var(--acento); }
+  .barra.gana .valor { background:var(--verde); }
+  .barra .umbral { position:absolute; top:0; bottom:0; width:2px; background:var(--amarilla); }
+  #entrada { font:12px/1.4 monospace; background:var(--fondo); padding:8px; border-radius:4px; color:var(--tenue); white-space:pre-wrap; }
+  #resumen { font-weight:700; }
+</style>
+<section>
+  <div class="cabecera">
+    <div><h1 style="margin:0">Demostración de la estación Andon</h1>
+      <div class="tenue">Cada caso ejecuta la situación sobre la estación real y compara lo esperado con lo obtenido.</div></div>
+    <div><label for="pin" style="margin-top:0">PIN de supervisor</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" style="width:140px"></div>
+    <div><button id="todos">▶ Ejecutar todos</button> <button id="exportar" style="background:#2d3640;color:var(--texto)">Exportar resultados</button></div>
+  </div>
+  <div id="resumen" class="tenue" style="margin-top:10px"></div>
+</section>
+<section>
+  <h2>Salud del sistema</h2>
+  <div class="salud" id="salud"></div>
+</section>
+<div class="rejilla">
+  <section><h2>Casos de uso</h2><div id="casos"></div></section>
+  <div>
+    <section>
+      <h2>Estación en vivo</h2>
+      <div class="torre"><div id="l-roja" class="luz"></div><div id="l-amarilla" class="luz"></div><div id="l-verde" class="luz"></div></div>
+      <div class="fila"><span>Estado</span><b id="v-estado">—</b></div>
+      <div class="fila"><span>Máquina</span><b id="v-maquina">—</b></div>
+      <div class="fila"><span>Vibración / temperatura</span><b id="v-lect">—</b></div>
+      <div class="fila"><span>Paro de seguridad</span><b id="v-paro">—</b></div>
+    </section>
+    <section>
+      <h2>Última decisión del modelo</h2>
+      <div id="d-texto" class="tenue">Todavía no hay reportes.</div>
+      <div id="barras"></div>
+      <div id="d-resumen" class="tenue" style="margin-top:8px"></div>
+      <details style="margin-top:10px"><summary class="tenue">Texto enviado al modelo</summary><div id="entrada"></div></details>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const NORMAL = {vib_g:0.1, ruido_g:0.01, temp_c:null, mpu_ok:true, ds18b20_ok:true};
+const ESPERA_MODELO_MS = 120000;
+let ultimo = null;
+
+// ---------------------------------------------------------------- utilidades
+const pausa = ms => new Promise(r => setTimeout(r, ms));
+async function esperar(condicion, ms, paso = 100) {
+  const t0 = performance.now();
+  while (performance.now() - t0 < ms) {
+    const s = await api("/api/estado");
+    if (condicion(s)) return {s, ms: performance.now() - t0};
+    await pausa(paso);
+  }
+  return null;
+}
+const pin = () => $("pin").value;
+const paro = s => !!(s.seguridad && s.seguridad.activo);
+const enVerde = s => !paro(s) && s.salidas && s.salidas.luz === "verde" && s.salidas.maquina === true
+  && s.estado && s.estado.estado === "reposo";
+async function normalizar() {
+  await api("/api/sim/ajustar", NORMAL);
+  await pausa(1300);                       // la ventana de RMS de 1 s se vacía de la falla
+  await api("/api/reiniciar", {pin: pin()});
+  if (!await esperar(enVerde, 15000)) throw new Error("la estación no volvió a operación normal");
+}
+async function reportar(texto) {
+  const {id} = await api("/api/reporte", {texto, ts_navegador: Date.now() / 1000});
+  const t0 = performance.now();
+  while (performance.now() - t0 < ESPERA_MODELO_MS) {
+    try { return await api("/api/evento/" + id); } catch (e) { if (e.codigo !== 404) throw e; }
+    await pausa(500);
+  }
+  throw new Error("el modelo no respondió a tiempo");
+}
+
+const desc = e => `${CATEGORIAS[e.categoria] || "sin clasificar"} (${pct(e.prob)}) → ${ACCIONES[e.accion] || e.accion}, ${(e.latencia_ms / 1000).toFixed(1)} s`;
+function verificar(condiciones) {      // [[cumple, texto si falla], ...]
+  const fallas = condiciones.filter(c => !c[0]).map(c => c[1]);
+  if (fallas.length) throw new Error(fallas.join("; "));
+}
+
+// ---------------------------------------------------------------- casos
+const CASOS = [
+  {id:"cu01", titulo:"CU-01 · Operación normal", esperado:"Luz verde, máquina en marcha y lecturas cada segundo bajo el umbral.",
+   async correr() {
+     await normalizar();
+     const s = await api("/api/estado");
+     verificar([[s.lecturas_edad_s !== null && s.lecturas_edad_s < 3, "no llegan lecturas"],
+                [s.lecturas.vib_rms_g < s.umbrales.vib_rms_g, "vibración sobre el umbral"]]);
+     return `verde y en marcha · ${s.lecturas.vib_rms_g.toFixed(2)} g, ${s.lecturas.temp_c.toFixed(1)} °C`;
+   }},
+  {id:"cu02v", titulo:"CU-02 · Paro por vibración", esperado:"Al superar el umbral: paro en menos de 1 s, luz roja y zumbador. Sigue detenida al desaparecer la falla.",
+   async correr() {
+     await normalizar();
+     const t0 = performance.now();
+     await api("/api/sim/ajustar", {vib_g: 2.0});
+     const r = await esperar(s => paro(s) && s.salidas.maquina === false, 3000, 50);
+     if (!r) throw new Error("no hubo paro en 3 s");
+     const ms = performance.now() - t0;
+     await api("/api/sim/ajustar", {vib_g: 0.1});
+     await pausa(2000);
+     const s = await api("/api/estado");
+     verificar([[ms < 1000, `el paro tardó ${ms.toFixed(0)} ms`], [r.s.seguridad.sensor === "vibracion", "causa: " + r.s.seguridad.sensor],
+                [r.s.salidas.luz === "roja" && r.s.salidas.zumbador, "sin luz roja o zumbador"], [paro(s), "el paro no quedó retenido"]]);
+     return `paro en ${ms.toFixed(0)} ms (medido desde el navegador) · retenido al normalizar la vibración`;
+   }},
+  {id:"cu02t", titulo:"CU-02 · Paro por temperatura", esperado:"Al superar el umbral de temperatura: paro y luz roja.",
+   async correr() {
+     await normalizar();
+     await api("/api/sim/ajustar", {temp_c: 85});
+     const r = await esperar(s => paro(s), 4000, 50);
+     await api("/api/sim/ajustar", {temp_c: null});
+     verificar([[r, "no hubo paro en 4 s"], [r && r.s.seguridad.sensor === "temperatura", "causa incorrecta"]]);
+     return `paro por temperatura: ${(+r.s.seguridad.valor).toFixed(1)} °C sobre ${r.s.seguridad.umbral} °C`;
+   }},
+  {id:"d13", titulo:"Sensor desconectado (D13)", esperado:"Sin lectura del MPU-6050 durante 2 s: paro retenido, igual que una falla.",
+   async correr() {
+     await normalizar();
+     await api("/api/sim/ajustar", {mpu_ok: false});
+     const r = await esperar(s => paro(s), 5000, 100);
+     await api("/api/sim/ajustar", {mpu_ok: true});
+     verificar([[r, "no hubo paro en 5 s"], [r && r.s.seguridad.sensor === "mpu6050_fallo", "causa incorrecta"]]);
+     return `paro «mpu6050_fallo» a los ${(r.ms / 1000).toFixed(1)} s`;
+   }},
+  {id:"cu03", titulo:"CU-03 · Falla que los sensores no ven", esperado:"«Huele a quemado…» con sensores normales: el modelo detecta falla eléctrica y la estación detiene la máquina.",
+   async correr() {
+     await normalizar();
+     const e = await reportar("Huele a quemado y salió una chispa del cable de alimentación");
+     const s = await api("/api/estado");
+     verificar([[e.accion === "parar_maquina", "acción: " + e.accion], [["falla_electrica", "falla_mecanica"].includes(e.categoria), "categoría: " + e.categoria],
+                [s.salidas.maquina === false && s.salidas.luz === "roja", "la máquina no se detuvo"], [!paro(s), "fue un paro de sensores, no del modelo"]]);
+     return desc(e) + " · aviso a " + (AREAS[e.area] || e.area);
+   }},
+  {id:"cu04", titulo:"CU-04 · Reporte de calidad", esperado:"«Piezas rayadas…»: luz amarilla, aviso a calidad y la máquina sigue.",
+   async correr() {
+     await normalizar();
+     const e = await reportar("Las piezas salen rayadas y fuera de especificación");
+     const s = await api("/api/estado");
+     verificar([[e.categoria === "problema_calidad", "categoría: " + e.categoria], [e.area === "calidad", "área: " + e.area],
+                [s.salidas.luz === "amarilla" && s.salidas.maquina === true, "luz o máquina incorrectas"]]);
+     return desc(e);
+   }},
+  {id:"cu05", titulo:"CU-05 · Reporte ambiguo", esperado:"Confianza bajo el umbral: revisión manual, luz amarilla, la máquina sigue.",
+   async correr() {
+     await normalizar();
+     const e = await reportar("Algo raro pasa, no sé qué es");
+     const s = await api("/api/estado");
+     verificar([[e.accion === "revision_manual", "acción: " + e.accion], [s.salidas.maquina === true, "detuvo la máquina"]]);
+     return desc(e) + ` · umbral ${pct(e.umbral)}`;
+   }},
+  {id:"cu06", titulo:"CU-06 · Reinicio con PIN", esperado:"Tras un paro, un PIN incorrecto se rechaza; con el correcto la máquina vuelve a verde.",
+   async correr() {
+     await normalizar();
+     await api("/api/sim/ajustar", {vib_g: 2.0});
+     if (!await esperar(paro, 3000, 50)) throw new Error("no se pudo provocar el paro");
+     await api("/api/sim/ajustar", {vib_g: 0.1});
+     let codigo = 200;
+     try { await api("/api/reiniciar", {pin: pin() + "9"}); } catch (e) { codigo = e.codigo; }
+     await pausa(1500);
+     const sigue = paro(await api("/api/estado"));
+     await api("/api/reiniciar", {pin: pin()});
+     const r = await esperar(enVerde, 10000);
+     verificar([[codigo === 403, "PIN incorrecto no rechazado"], [sigue, "se liberó sin PIN"], [r, "no volvió a verde con el PIN"]]);
+     return "PIN incorrecto rechazado (403) · con el PIN correcto vuelve a verde";
+   }},
+  {id:"cu07", titulo:"CU-07 · Cambio de umbral sin reiniciar", esperado:"Al bajar el umbral de vibración bajo el nivel normal, la estación se detiene sin reiniciar servicios.",
+   async correr() {
+     await normalizar();
+     const u = (await api("/api/estado")).umbrales;
+     const valores = v => ({vib_rms_g: v, temp_c: u.temp_c, umbral_confianza: u.umbral_confianza});
+     await api("/api/umbrales", {pin: pin(), valores: valores(0.05)});
+     const r = await esperar(paro, 5000, 100);
+     await api("/api/umbrales", {pin: pin(), valores: valores(u.vib_rms_g)});
+     verificar([[r, "el umbral nuevo no se aplicó"]]);
+     return `umbral 0,05 g aplicado en ${(r.ms / 1000).toFixed(1)} s · restaurado a ${u.vib_rms_g} g`;
+   }},
+  {id:"indep", titulo:"Seguridad independiente del modelo", esperado:"Con el modelo analizando un reporte, una falla igual detiene la máquina en menos de 1 s, y el modelo no la vuelve a arrancar.",
+   async correr() {
+     await normalizar();
+     const reporte = reportar("Todo funciona bien, la máquina corre sin problemas");
+     if (!await esperar(s => s.estado && s.estado.estado === "analizando", 10000, 50)) throw new Error("no llegó a analizar");
+     const t0 = performance.now();
+     await api("/api/sim/ajustar", {vib_g: 2.0});
+     const r = await esperar(s => paro(s) && s.salidas.maquina === false, 3000, 50);
+     const ms = performance.now() - t0;
+     await api("/api/sim/ajustar", {vib_g: 0.1});
+     const e = await reporte;
+     const s = await api("/api/estado");
+     verificar([[r, "no hubo paro"], [ms < 1000, `el paro tardó ${ms.toFixed(0)} ms`], [s.salidas.maquina === false && paro(s), "el modelo reactivó la máquina"]]);
+     return `paro en ${ms.toFixed(0)} ms mientras el modelo analizaba · después el modelo respondió «${ACCIONES[e.accion] || e.accion}» sin arrancar la máquina`;
+   }},
+];
+
+// ---------------------------------------------------------------- interfaz
+const resultados = {};
+function pintarCasos() {
+  $("casos").replaceChildren(...CASOS.map(c => {
+    const r = resultados[c.id] || {};
+    const fila = document.createElement("div"); fila.className = "caso";
+    const marca = document.createElement("div"); marca.className = "marca";
+    marca.textContent = {ok:"✅", mal:"❌", corre:"⏳"}[r.estado] || "○";
+    const cuerpo = document.createElement("div");
+    const h = document.createElement("h3"); h.textContent = c.titulo;
+    const e = document.createElement("div"); e.className = "esperado"; e.textContent = "Esperado: " + c.esperado;
+    cuerpo.append(h, e);
+    if (r.detalle) { const o = document.createElement("div"); o.className = "obtenido " + (r.estado || ""); o.textContent = "Obtenido: " + r.detalle; cuerpo.append(o); }
+    const b = document.createElement("button"); b.textContent = "▶ Ejecutar"; b.disabled = corriendo;
+    b.addEventListener("click", () => ejecutar([c]));
+    fila.append(marca, cuerpo, b); return fila;
+  }));
+  const hechos = CASOS.filter(c => resultados[c.id] && ["ok", "mal"].includes(resultados[c.id].estado));
+  const ok = hechos.filter(c => resultados[c.id].estado === "ok").length;
+  $("resumen").textContent = hechos.length ? `${ok} de ${hechos.length} casos cumplen lo esperado` : "";
+  $("todos").disabled = corriendo;
+}
+let corriendo = false;
+async function ejecutar(lista) {
+  if (!pin()) { $("resumen").textContent = "Ingresá el PIN de supervisor para ejecutar los casos."; return; }
+  corriendo = true;
+  for (const c of lista) {
+    resultados[c.id] = {estado:"corre", detalle:"ejecutando…"}; pintarCasos();
+    const t0 = performance.now();
+    try { resultados[c.id] = {estado:"ok", detalle: await c.correr()}; }
+    catch (e) { resultados[c.id] = {estado:"mal", detalle: e.message}; }
+    resultados[c.id].segundos = ((performance.now() - t0) / 1000).toFixed(1);
+    resultados[c.id].hora = new Date().toLocaleTimeString("es-CR");
+    pintarCasos();
+  }
+  try { await normalizar(); } catch {}
+  corriendo = false; pintarCasos();
+}
+$("todos").addEventListener("click", () => ejecutar(CASOS));
+$("exportar").addEventListener("click", () => {
+  const filas = [["caso", "esperado", "resultado", "obtenido", "hora", "duracion_s"]].concat(CASOS.map(c => {
+    const r = resultados[c.id] || {};
+    return [c.titulo, c.esperado, r.estado === "ok" ? "cumple" : r.estado === "mal" ? "no cumple" : "sin ejecutar", r.detalle || "", r.hora || "", r.segundos || ""];
+  }));
+  const csv = filas.map(f => f.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "andon-defensa.csv"; a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+function chequeo(titulo, ok, detalle) {
+  const d = document.createElement("div"); d.className = "chequeo " + (ok ? "ok" : "mal");
+  const b = document.createElement("b"); b.textContent = (ok ? "✅ " : "❌ ") + titulo;
+  d.append(b, document.createTextNode(detalle)); return d;
+}
+function pintarDecision(e) {
+  $("d-texto").textContent = "«" + e.texto + "»";
+  const probs = e.probs || {};
+  const orden = Object.keys(CATEGORIAS).sort((a, b) => (probs[b] || 0) - (probs[a] || 0));
+  $("barras").replaceChildren(...(e.probs ? orden.map(cat => {
+    const fila = document.createElement("div"); fila.className = "barra" + (cat === e.categoria ? " gana" : "");
+    const n = document.createElement("span"); n.textContent = CATEGORIAS[cat];
+    const f = document.createElement("div"); f.className = "fondo";
+    const v = document.createElement("div"); v.className = "valor"; v.style.width = ((probs[cat] || 0) * 100) + "%";
+    f.append(v);
+    if (e.umbral) { const u = document.createElement("div"); u.className = "umbral"; u.style.left = (e.umbral * 100) + "%"; f.append(u); }
+    const p = document.createElement("span"); p.textContent = pct(probs[cat] || 0);
+    fila.append(n, f, p); return fila;
+  }) : []));
+  $("d-resumen").textContent = e.error ? "El modelo no respondió: la estación pasó a revisión manual."
+    : `${ACCIONES[e.accion] || e.accion}${e.area ? " · aviso a " + (AREAS[e.area] || e.area) : ""} · ${(e.latencia_ms / 1000).toFixed(1)} s · la línea amarilla es el umbral de confianza`;
+  $("entrada").textContent = e.entrada || "";
+}
+async function refrescar() {
+  let s;
+  try { s = await api("/api/estado"); } catch { $("salud").replaceChildren(chequeo("Web", false, " sin respuesta de la estación")); return; }
+  const nombre = s.estado && s.estado.estado, sal = s.salidas || {};
+  $("salud").replaceChildren(
+    chequeo("Bus de mensajes", s.conectado, " la web está conectada a MQTT"),
+    chequeo("Sensores", s.lecturas_edad_s !== null && s.lecturas_edad_s < 3, s.sim ? " simulados, publicando cada 1 s" : " publicando cada 1 s"),
+    chequeo("Modelo de IA", !!nombre && nombre !== "calentando", nombre === "calentando" ? " cargando tev1:0.8b…" : " tev1:0.8b cargado en la placa"),
+    chequeo("Simulador", !!s.sim, s.sim ? " activo: las perillas reemplazan a los sensores" : " inactivo: use modo.sh sim"),
+    chequeo("Umbrales", true, ` ${s.umbrales.vib_rms_g} g · ${s.umbrales.temp_c} °C · confianza ${s.umbrales.umbral_confianza}`));
+  for (const c of ["roja", "amarilla", "verde"]) $("l-" + c).classList.toggle("on", sal.luz === c);
+  $("v-estado").textContent = ESTADOS[nombre] || "—";
+  $("v-maquina").textContent = sal.maquina === undefined ? "—" : sal.maquina ? "en marcha" : "detenida";
+  $("v-lect").textContent = s.lecturas ? `${(s.lecturas.vib_rms_g ?? 0).toFixed(2)} g · ${(s.lecturas.temp_c ?? 0).toFixed(1)} °C` : "—";
+  $("v-paro").textContent = paro(s) ? "activo (" + s.seguridad.sensor + ")" : "no";
+  const e = s.eventos[0];
+  if (e && e.id !== ultimo) { ultimo = e.id; pintarDecision(e); }
+}
+pintarCasos(); refrescar(); setInterval(refrescar, 700);
+</script>
+{% endblock %}

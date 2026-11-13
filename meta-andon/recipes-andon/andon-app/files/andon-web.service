@@ -1,0 +1,16 @@
+[Unit]
+Description=Andon · formulario del operario y tablero (puerto 5000)
+After=mosquitto.service
+Wants=mosquitto.service
+
+[Service]
+User=andon
+Group=andon
+Environment=PYTHONPATH=/opt/andon
+Environment=ANDON_CONF=/etc/andon/andon.conf
+ExecStart=/usr/bin/python3 -m andon.web
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

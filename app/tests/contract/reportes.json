@@ -1,0 +1,154 @@
+[
+ {
+  "id": 1,
+  "texto": "Todo funciona bien, la máquina corre sin problemas",
+  "vib_rms_g": 0.2,
+  "temp_c": 35,
+  "esperada": "operacion_normal",
+  "ambiguo": false
+ },
+ {
+  "id": 2,
+  "texto": "Sin novedades en la estación, el ventilador gira normal",
+  "vib_rms_g": 0.15,
+  "temp_c": 34,
+  "esperada": "operacion_normal",
+  "ambiguo": false
+ },
+ {
+  "id": 3,
+  "texto": "Revisé el turno y está todo en orden",
+  "vib_rms_g": 0.2,
+  "temp_c": 36,
+  "esperada": "operacion_normal",
+  "ambiguo": false
+ },
+ {
+  "id": 4,
+  "texto": "El ventilador hace un ruido metálico fuerte y vibra mucho",
+  "vib_rms_g": 0.9,
+  "temp_c": 42,
+  "esperada": "falla_mecanica",
+  "ambiguo": false
+ },
+ {
+  "id": 5,
+  "texto": "Se aflojó el aspa y golpea contra la carcasa",
+  "vib_rms_g": 1.1,
+  "temp_c": 40,
+  "esperada": "falla_mecanica",
+  "ambiguo": false
+ },
+ {
+  "id": 6,
+  "texto": "Se escucha un rechinido en el eje, parece un rodamiento dañado",
+  "vib_rms_g": 0.8,
+  "temp_c": 45,
+  "esperada": "falla_mecanica",
+  "ambiguo": false
+ },
+ {
+  "id": 7,
+  "texto": "La máquina se atascó y no gira libremente",
+  "vib_rms_g": 0.5,
+  "temp_c": 50,
+  "esperada": "falla_mecanica",
+  "ambiguo": false
+ },
+ {
+  "id": 8,
+  "texto": "Huele a quemado y salió una chispa del cable de alimentación",
+  "vib_rms_g": 0.2,
+  "temp_c": 55,
+  "esperada": "falla_electrica",
+  "ambiguo": false
+ },
+ {
+  "id": 9,
+  "texto": "La máquina no enciende y el tablero eléctrico está apagado",
+  "vib_rms_g": 0.0,
+  "temp_c": 30,
+  "esperada": "falla_electrica",
+  "ambiguo": false
+ },
+ {
+  "id": 10,
+  "texto": "Hay un cortocircuito, el fusible se quemó otra vez",
+  "vib_rms_g": 0.1,
+  "temp_c": 48,
+  "esperada": "falla_electrica",
+  "ambiguo": false
+ },
+ {
+  "id": 11,
+  "texto": "Las piezas están saliendo rayadas y fuera de especificación",
+  "vib_rms_g": 0.2,
+  "temp_c": 35,
+  "esperada": "problema_calidad",
+  "ambiguo": false
+ },
+ {
+  "id": 12,
+  "texto": "Encontré varias piezas defectuosas en el último lote",
+  "vib_rms_g": 0.2,
+  "temp_c": 36,
+  "esperada": "problema_calidad",
+  "ambiguo": false
+ },
+ {
+  "id": 13,
+  "texto": "El acabado de las piezas es irregular, hay que rechazarlas",
+  "vib_rms_g": 0.2,
+  "temp_c": 34,
+  "esperada": "problema_calidad",
+  "ambiguo": false
+ },
+ {
+  "id": 14,
+  "texto": "Se acabaron los tornillos y no podemos seguir ensamblando",
+  "vib_rms_g": 0.1,
+  "temp_c": 30,
+  "esperada": "material_faltante",
+  "ambiguo": false
+ },
+ {
+  "id": 15,
+  "texto": "Falta material en la estación, el proveedor no ha entregado",
+  "vib_rms_g": 0.1,
+  "temp_c": 31,
+  "esperada": "material_faltante",
+  "ambiguo": false
+ },
+ {
+  "id": 16,
+  "texto": "No quedan empaques para terminar el pedido",
+  "vib_rms_g": 0.1,
+  "temp_c": 30,
+  "esperada": "material_faltante",
+  "ambiguo": false
+ },
+ {
+  "id": 17,
+  "texto": "Algo raro pasa con la máquina pero no sé qué es",
+  "vib_rms_g": 0.3,
+  "temp_c": 38,
+  "esperada": null,
+  "ambiguo": true
+ },
+ {
+  "id": 18,
+  "texto": "Siento que no está funcionando como siempre",
+  "vib_rms_g": 0.3,
+  "temp_c": 37,
+  "esperada": null,
+  "ambiguo": true
+ },
+ {
+  "id": 19,
+  "texto": "Hay un problema, vengan a ver",
+  "vib_rms_g": 0.3,
+  "temp_c": 36,
+  "esperada": null,
+  "ambiguo": true
+ }
+]

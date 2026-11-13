@@ -1,0 +1,69 @@
+name: andon
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  ollama:
+    image: ollama/ollama:0.40.13   # misma versión que la receta ollama-bin de la imagen
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-modelos:/root/.ollama
+
+  dev:
+    image: andon-dev
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - ..:/work
+    environment:
+      ANDON_MODO: sim
+      ANDON_MQTT_HOST: mosquitto
+      ANDON_OLLAMA_URL: http://ollama:11434
+    depends_on:
+      - mosquitto
+      - ollama
+    command: ["sleep", "infinity"]
+
+  # andon-sensores en modo simulado. No arranca con `up -d`; use:
+  #   docker compose -f docker/compose.yaml --profile sim up -d sensores
+  # Deténgalo antes de correr pytest app/tests/unit/test_mqtt_integracion.py
+  sensores:
+    profiles: ["sim"]
+    image: andon-dev
+    working_dir: /work
+    volumes:
+      - ..:/work
+    environment:
+      ANDON_MODO: sim
+      ANDON_MQTT_HOST: mosquitto
+      ANDON_PARO_RUTA: /tmp/andon-paro.json
+    depends_on:
+      - mosquitto
+    command: ["python", "-m", "andon.sensores"]
+
+  # andon-core. Usa el Ollama real de este compose (o ANDON_OLLAMA_URL=http://host:puerto con
+  # tools/fake_ollama.py). Arranque:  docker compose -f docker/compose.yaml --profile sim up -d core
+  core:
+    profiles: ["sim"]
+    image: andon-dev
+    working_dir: /work
+    volumes:
+      - ..:/work
+    environment:
+      ANDON_MODO: sim
+      ANDON_MQTT_HOST: mosquitto
+      ANDON_OLLAMA_URL: ${ANDON_OLLAMA_URL:-http://ollama:11434}
+      ANDON_DB_RUTA: /tmp/andon.db
+    depends_on:
+      - mosquitto
+    command: ["python", "-m", "andon.core"]
+
+volumes:
+  ollama-modelos:
